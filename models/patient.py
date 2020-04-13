@@ -1,5 +1,3 @@
-
-
 class Patient():
     def __init__(self, array, type):
         self.array = array
