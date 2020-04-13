@@ -28,9 +28,11 @@ dftovisualize.to_csv(r'checkpoint.txt', header=None, index=None, sep=' ', mode='
 
 def process_data():
     """
-    Processes the data to a usable format.
-    Returns X: numpy dataframe with chromosomal data
-            Y: numpy dataframe with diagnosis per patient
+    Processes patient data to a usable format.
+
+    Returns:
+        X (numpy array) : numpy dataframe with chromosomal data
+        Y (numpy array) : numpy dataframe with diagnosis per patient
     """
 
     #Storing the data as two Dataframes
@@ -71,7 +73,14 @@ def process_data():
 def FS_ReliefF(X, Y):
     """
     Feature selection using RelieF
-    Returns X_fil: filtered dataframe
+
+    Args:
+        X (numpy array): aCGH data
+        Y (numpy array): diagnosis data
+
+    Returns:
+
+        X_fil: filtered dataframe
     """
     fs = ReliefF(n_neighbors=RELIEFF_K, n_features_to_keep=N_FEATURES)
     X_fil = fs.fit_transform(X, Y)
@@ -81,8 +90,15 @@ def FS_ReliefF(X, Y):
 
 def FS_RFE(X, Y):
     """
-    Feature selection using SVM-RFE
-    Returns X_fil: filtered dataframe
+    Feature selection using RFE-SVM
+
+    Args:
+        X (numpy array): aCGH data
+        Y (numpy array): diagnosis data
+
+    Returns:
+
+        X_fil: filtered dataframe
     """
 
     estimator = SVC(kernel="linear")
@@ -100,8 +116,15 @@ def FS_RFE(X, Y):
 
 def FS_IG(X, Y):
     """
-    Feature selection using IG
-    Returns X_fil: filtered dataframe
+    Feature selection using FS_IG
+
+    Args:
+        X (numpy array): aCGH data
+        Y (numpy array): diagnosis data
+
+    Returns:
+
+        X_fil: filtered dataframe
     """
 
     # gets the gains vector
