@@ -14,7 +14,6 @@ from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 from sklearn.feature_selection import mutual_info_classif
 import seaborn as sns
-import copy
 
 N_FEATURES = 40
 RELIEFF_K = 10
@@ -173,8 +172,8 @@ def make_plot(Y_test, Y_pred):
 
 if __name__ == "__main__":
     X, Y = process_data()
-    # X_fil = FS_ReliefF(X, Y)
-    X_fil = FS_RFE(X, Y)
+    X_fil = FS_ReliefF(X, Y)
+    # X_fil = FS_RFE(X, Y)
     # X_fil = FS_IG(X, Y)
     X_train, X_test, Y_train, Y_test = CV(X_fil, Y)
     Y_pred = classify(X_train, X_test, Y_train, Y_test)
