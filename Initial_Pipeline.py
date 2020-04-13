@@ -7,13 +7,19 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.style as style
 from ReliefF import ReliefF
 from sklearn.feature_selection import RFE
 from sklearn.svm import SVR
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
 from sklearn.feature_selection import mutual_info_classif
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
 import seaborn as sns
+
+style.use('seaborn-whitegrid')
+sns.set()
 
 N_FEATURES = 40
 RELIEFF_K = 10
@@ -26,6 +32,7 @@ dftovisualize.to_csv(r'checkpoint.txt', header=None, index=None, sep=' ', mode='
 """
 
 def process_data():
+
     """
     Processes patient data to a usable format.
 
@@ -54,13 +61,12 @@ def process_data():
     temp_df = dfcall.T                      #Transposes the dataframe
     rotated_df=temp_df[4::]                 #Removes the first 4 lines corresponding to the chromosomal locations and clone number (we do not need them for the moment)
     rotated_df = rotated_df.reset_index()   #Sets the new index based on the new number of rows (needed for adding the Diagnosis column afterwards)
-    print("rot", rotated_df)
+    #print("rot", rotated_df)
 
     #Add the column of the diagnosis from dfclin at the end of the rotated dfcall. Now each patient (row) has a combination
     # of 0,1,2 values, that we have to link to a diagnosis. It can be found in dfclin dataframe.
 
     final_df=rotated_df.assign(Diagnosis=dfclin.Subgroup)   #Adds a column Diagnosis with the information of dfclin "Subgroup" column
-
 
     # Store separately the values and the diagnosis. This step is needed for the classifier,
     # we need to give separately the values from the diagnosis
@@ -85,7 +91,6 @@ def FS_ReliefF(X, Y):
     X_fil = fs.fit_transform(X, Y)
 
     return X_fil
-
 
 def FS_RFE(X, Y):
     """
@@ -122,7 +127,6 @@ def FS_IG(X, Y):
         Y (numpy array): diagnosis data
 
     Returns:
-
         X_fil: filtered dataframe
     """
 
@@ -136,7 +140,6 @@ def FS_IG(X, Y):
     X_fil = np.delete(X, delete_ind, 1)
 
     return X_fil
-
 
 def CV(X, Y):
     #
@@ -160,7 +163,7 @@ def make_plot(Y_test, Y_pred):
     #Create confusion table based on the prediction values
     labels=["HER2+","HR+","Triple Neg"]
     cm = confusion_matrix(Y_test, Y_pred,labels)            #This builds a confusion matrix by comparing diagnosis from the Test set (True diagnosis) against the predicted diagnosis (Y_pred)
-    print(cm)
+    #print(cm)
 
     #Visualize the confusion table
     sns.set(font_scale=1.4) # for label size
@@ -169,17 +172,73 @@ def make_plot(Y_test, Y_pred):
     plt.xlabel('Predicted')
     plt.show()
 
+def summarize(scores):
+    """
+
+    returns the mean, the standard deviation, the min and the max
+    of the cross validation accuracy.
+
+    Args:
+        scores (numpy array): accuracy scores of the cross validation
+
+    Returns:
+        summary (dict):
+            mean: mean of scores
+            std: standard deviation of scores
+            min: minimum of scores
+            max: maximum of scores
+    """
+
+    summary = {'mean':np.mean(scores),
+                'std':np.std(scores),
+                'max':max(scores),
+                'min':min(scores)}
+
+    return summary
+
+def boxplots_results(results, title=None):
+    """
+    Create a boxplot of the accuracy of the different feature
+    selection methods.
+    """
+    sns.boxplot(x='accuracy',y='classifier',data=results)
+    
+    plt.gca().set_title('cross validation results')
+    plt.gca().set_ylabel('classifier')
+    plt.show()
 
 if __name__ == "__main__":
+    classifier = SVC(kernel = 'linear', random_state = 0)
+    validator = KFold(n_splits=5)
+
     X, Y = process_data()
-    X_fil = FS_ReliefF(X, Y)
-    # X_fil = FS_RFE(X, Y)
-    # X_fil = FS_IG(X, Y)
+
+    # different train sets for the feature selection methods
+    feature_selectors = {"ReliefF":FS_ReliefF(X, Y),
+                            "RFE":FS_RFE(X, Y),
+                            "InfoGain":FS_IG(X, Y)}
+    entries = []
+
+    for selector,X_fil in feature_selectors.items():
+
+        # get the accuracy score of each feature selection method
+        scores = cross_val_score(X=X_fil, y=Y,
+                                     estimator=classifier,
+                                     scoring='accuracy',
+                                     cv=validator)
+
+        for _,score in enumerate(scores):
+            entries.append((selector, score))
+
+    results = pd.DataFrame(entries, columns=['classifier', 'accuracy'])
+
+    print(results)
+    boxplots_results(results)
+
+    # this can also be added to the loop probably.
     X_train, X_test, Y_train, Y_test = CV(X_fil, Y)
     Y_pred = classify(X_train, X_test, Y_train, Y_test)
     make_plot(Y_test, Y_pred)
-
-
 
 """Sources:
 https://towardsdatascience.com/building-a-simple-machine-learning-model-on-breast-cancer-data-eca4b3b99fa3
