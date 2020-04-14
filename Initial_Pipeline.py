@@ -71,7 +71,7 @@ def process_data():
 
 def FS_ReliefF(X, Y):
     """
-    Feature selection using RelieF
+    Feature selection using ReliefF
 
     Args:
         X (numpy array): aCGH data
@@ -130,7 +130,7 @@ def FS_IG(X, Y):
     gain_vec = mutual_info_classif(X, Y, discrete_features=True)
 
     # gets the indices of columns that can be deleted from the dataset
-    delete_ind = gain_vec.argsort()[N_FEATURES:][::-1]
+    delete_ind = gain_vec.argsort()[::-1][N_FEATURES:]
 
     # deletes the features that can be deleted
     X_fil = np.delete(X, delete_ind, 1)
@@ -172,9 +172,9 @@ def make_plot(Y_test, Y_pred):
 
 if __name__ == "__main__":
     X, Y = process_data()
-    X_fil = FS_ReliefF(X, Y)
+    # X_fil = FS_ReliefF(X, Y)
     # X_fil = FS_RFE(X, Y)
-    # X_fil = FS_IG(X, Y)
+    X_fil = FS_IG(X, Y)
     X_train, X_test, Y_train, Y_test = CV(X_fil, Y)
     Y_pred = classify(X_train, X_test, Y_train, Y_test)
     make_plot(Y_test, Y_pred)
