@@ -202,21 +202,13 @@ def boxplots_results(results, title=None):
     selection methods.
     """
     sns.boxplot(x='accuracy',y='classifier',data=results)
-    
+
     plt.gca().set_title('cross validation results')
     plt.gca().set_ylabel('classifier')
     plt.show()
 
-if __name__ == "__main__":
-    classifier = SVC(kernel = 'linear', random_state = 0)
-    validator = KFold(n_splits=5)
+def cross_validate(feature_selectors):
 
-    X, Y = process_data()
-
-    # different train sets for the feature selection methods
-    feature_selectors = {"ReliefF":FS_ReliefF(X, Y),
-                            "RFE":FS_RFE(X, Y),
-                            "InfoGain":FS_IG(X, Y)}
     entries = []
 
     for selector,X_fil in feature_selectors.items():
@@ -230,7 +222,20 @@ if __name__ == "__main__":
         for _,score in enumerate(scores):
             entries.append((selector, score))
 
-    results = pd.DataFrame(entries, columns=['classifier', 'accuracy'])
+    return pd.DataFrame(entries, columns=['classifier', 'accuracy'])
+
+if __name__ == "__main__":
+    classifier = SVC(kernel = 'linear', random_state = 0)
+    validator = KFold(n_splits=5)
+
+    X, Y = process_data()
+
+    # different train sets for the feature selection methods
+    feature_selectors = {"ReliefF":FS_ReliefF(X, Y),
+                            "RFE":FS_RFE(X, Y),
+                            "InfoGain":FS_IG(X, Y)}
+
+    results = cross_validate(feature_selectors)
 
     print(results)
     boxplots_results(results)
