@@ -108,12 +108,12 @@ def FS_RFE(X, Y):
     estimator = SVC(kernel="linear")
     selector = RFE(estimator, N_FEATURES, step=1)
     selector = selector.fit(X, Y)
+
     # construct mask
     mask = []
     for i in range(len(selector.support_)):
         if not selector.support_[i]:
             mask.append(i)
-
 
     X_fil = np.delete(X, mask, 1)
     return X_fil
@@ -134,7 +134,7 @@ def FS_IG(X, Y):
     gain_vec = mutual_info_classif(X, Y, discrete_features=True)
 
     # gets the indices of columns that can be deleted from the dataset
-    delete_ind = gain_vec.argsort()[N_FEATURES:][::-1]
+    delete_ind = gain_vec.argsort()[::-1][N_FEATURES:]
 
     # deletes the features that can be deleted
     X_fil = np.delete(X, delete_ind, 1)
@@ -225,6 +225,7 @@ def cross_validate(feature_selectors):
     return pd.DataFrame(entries, columns=['classifier', 'accuracy'])
 
 if __name__ == "__main__":
+
     classifier = SVC(kernel = 'linear', random_state = 0)
     validator = KFold(n_splits=5)
 
