@@ -77,7 +77,7 @@ def process_data():
 
 def FS_ReliefF(X, Y):
     """
-    Feature selection using RelieF
+    Feature selection using ReliefF
 
     Args:
         X (numpy array): aCGH data
