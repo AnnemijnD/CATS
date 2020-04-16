@@ -16,7 +16,9 @@ from sklearn.metrics import confusion_matrix
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
 import seaborn as sns
+import itertools
 
 style.use('seaborn-whitegrid')
 sns.set()
@@ -75,7 +77,7 @@ def process_data():
     Y = final_df.iloc[:, -1].values         #Store in Y all the diagnosis ("Tripneg","HR+",...)
     return X, Y
 
-def FS_ReliefF(X, Y):
+def FS_ReliefF(X_train,Y_train,X_test):
     """
     Feature selection using ReliefF
 
@@ -88,11 +90,15 @@ def FS_ReliefF(X, Y):
         X_fil: filtered dataframe
     """
     fs = ReliefF(n_neighbors=RELIEFF_K, n_features_to_keep=N_FEATURES)
-    X_fil = fs.fit_transform(X, Y)
 
-    return X_fil
+    fs.fit(X_train,Y_train)
 
-def FS_RFE(X, Y):
+    X_train_fil = fs.transform(X_train)
+    X_test_fil = fs.transform(X_test)
+
+    return X_train_fil,X_test_fil
+
+def FS_RFE(X_train, Y_train,X_test):
     """
     Feature selection using RFE-SVM
 
@@ -107,7 +113,7 @@ def FS_RFE(X, Y):
 
     estimator = SVC(kernel="linear")
     selector = RFE(estimator, N_FEATURES, step=1)
-    selector = selector.fit(X, Y)
+    selector = selector.fit(X_train, Y_train)
 
     # construct mask
     mask = []
@@ -115,10 +121,12 @@ def FS_RFE(X, Y):
         if not selector.support_[i]:
             mask.append(i)
 
-    X_fil = np.delete(X, mask, 1)
-    return X_fil
+    X_train_fil = np.delete(X_train, mask, 1)
+    X_test_fil = np.delete(X_test, mask, 1)
 
-def FS_IG(X, Y):
+    return X_train_fil,X_test_fil
+
+def FS_IG(X_train,Y_train,X_test):
     """
     Feature selection using FS_IG
 
@@ -131,15 +139,16 @@ def FS_IG(X, Y):
     """
 
     # gets the gains vector
-    gain_vec = mutual_info_classif(X, Y, discrete_features=True)
+    gain_vec = mutual_info_classif(X_train, Y_train, discrete_features=True)
 
     # gets the indices of columns that can be deleted from the dataset
     delete_ind = gain_vec.argsort()[::-1][N_FEATURES:]
 
     # deletes the features that can be deleted
-    X_fil = np.delete(X, delete_ind, 1)
+    X_train_fil = np.delete(X_train, delete_ind, 1)
+    X_test_fil = np.delete(X_test, delete_ind, 1)
 
-    return X_fil
+    return X_train_fil,X_test_fil
 
 def CV(X, Y):
     #
@@ -157,21 +166,42 @@ def classify(X_train, X_test, Y_train, Y_test):
 
     #Predict the test set results using SVM model
     Y_pred = classifier.predict(X_test)                     #This predicts the diagnosis (Y_pred) of the test set data (X_test)
-    return Y_pred
 
-def make_plot(Y_test, Y_pred):
+    score = accuracy_score(Y_test,Y_pred)
+
+    return score,Y_pred
+
+def make_plot(feature_selectors,test_list, pred_list):
+
     #Create confusion table based on the prediction values
     labels=["HER2+","HR+","Triple Neg"]
-    cm = confusion_matrix(Y_test, Y_pred,labels)            #This builds a confusion matrix by comparing diagnosis from the Test set (True diagnosis) against the predicted diagnosis (Y_pred)
-    #print(cm)
 
-    #Visualize the confusion table
-    sns.set(font_scale=1.4) # for label size
-    sns.heatmap(cm, annot=True, annot_kws={"size": 16},xticklabels=labels,yticklabels=labels,cmap="Blues")
-    plt.ylabel('True')
-    plt.xlabel('Predicted')
+    for i in range(len(feature_selectors)):
+
+        cm = confusion_matrix(test_list[i], pred_list[i],labels,normalize='true')            #This builds a confusion matrix by comparing diagnosis from the Test set (True diagnosis) against the predicted diagnosis (Y_pred)
+        #print(cm)
+
+        #Visualize the confusion table
+        sns.set(font_scale=1.4) # for label size
+        sns.heatmap(cm, annot=True, annot_kws={"size": 16},xticklabels=labels,yticklabels=labels,cmap="Blues")
+        plt.ylabel('True')
+        plt.xlabel('Predicted')
+        plt.show()
+
+"""def plot_cm(name, model, xtrain, ytrain, xtest, ytest, ax=None, print_report=True):
+    random.seed(0)
+    np.random.seed(0)
+    model.fit(xtrain, ytrain)
+    fig = plot_confusion_matrix(model, xtest, ytest,
+                      cmap=plt.cm.Blues, xticks_rotation='vertical',
+                      normalize='pred', values_format='.2f', ax=ax)
+    fig.ax_.set_title("confusion matrix: "+str(name))
+    ypred = model.predict(xtest)
     plt.show()
-
+    if print_report:
+        print("===report:", str(name))
+        print(classification_report(ytest, ypred))
+"""
 def summarize(scores):
     """
 
@@ -207,22 +237,55 @@ def boxplots_results(results, title=None):
     plt.gca().set_ylabel('classifier')
     plt.show()
 
-def cross_validate(feature_selectors):
+def cross_validate(X,Y):
+
+    Nsplits = 5
+
+    validator = KFold(n_splits=Nsplits)
 
     entries = []
+    ind = 0
+    pred_list = []
+    test_list = []
 
-    for selector,X_fil in feature_selectors.items():
+    for selector in feature_selectors:
 
-        # get the accuracy score of each feature selection method
-        scores = cross_val_score(X=X_fil, y=Y,
-                                     estimator=classifier,
-                                     scoring='accuracy',
-                                     cv=validator)
+        print('\n starting with {}...\n'.format(selector))
 
-        for _,score in enumerate(scores):
-            entries.append((selector, score))
+        ind = 0
 
-    return pd.DataFrame(entries, columns=['classifier', 'accuracy'])
+        this_pred_list = []
+        this_test_list = []
+
+        for train_index, test_index in validator.split(X):
+
+            ind +=1
+
+            print('starting with iteration {} of cross validation for {}'.format(ind,selector))
+
+            X_train, X_test = X[train_index], X[test_index]
+            Y_train, Y_test = Y[train_index], Y[test_index]
+
+            if selector == 'ReliefF':
+                X_train_fil,X_test_fil = FS_ReliefF(X_train,Y_train,X_test)
+            if selector == 'RFE':
+                X_train_fil,X_test_fil = FS_RFE(X_train,Y_train,X_test)
+            if selector == 'InfoGain':
+                X_train_fil,X_test_fil = FS_IG(X_train,Y_train,X_test)
+
+            score,Y_pred = classify(X_train_fil,X_test_fil,Y_train,Y_test)
+
+            this_pred_list.append(Y_pred.tolist())
+            this_test_list.append(Y_test.tolist())
+
+            entries.append((selector,score))
+
+        this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
+        this_test_list = list(itertools.chain.from_iterable(this_test_list))
+        pred_list.append(this_pred_list)
+        test_list.append(this_test_list)
+
+    return pd.DataFrame(entries, columns=['classifier', 'accuracy']),pred_list,test_list
 
 if __name__ == "__main__":
 
@@ -232,19 +295,20 @@ if __name__ == "__main__":
     X, Y = process_data()
 
     # different train sets for the feature selection methods
-    feature_selectors = {"ReliefF":FS_ReliefF(X, Y),
-                            "RFE":FS_RFE(X, Y),
-                            "InfoGain":FS_IG(X, Y)}
+    feature_selectors = ["ReliefF","InfoGain","RFE"]
 
-    results = cross_validate(feature_selectors)
+    results,pred_list,test_list = cross_validate(X,Y)
 
+    print("ACCURACY RESULTS: \n")
     print(results)
     boxplots_results(results)
 
-    # this can also be added to the loop probably.
-    X_train, X_test, Y_train, Y_test = CV(X_fil, Y)
-    Y_pred = classify(X_train, X_test, Y_train, Y_test)
-    make_plot(Y_test, Y_pred)
+    make_plot(feature_selectors,test_list, pred_list)
+
+
+    #plot_cm(classifier)
+
+    #name, model, xtrain, ytrain, xtest, ytest, ax=None, print_report=True
 
 """Sources:
 https://towardsdatascience.com/building-a-simple-machine-learning-model-on-breast-cancer-data-eca4b3b99fa3
