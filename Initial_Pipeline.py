@@ -72,7 +72,8 @@ def process_data():
     # we need to give separately the values from the diagnosis
 
     X = final_df.iloc[:,1:2835].values      #Store in X all the row data (without sample name or diagnosis). NOTICE that this takes ALL the features, usually we would apply a feature selection method
-    Y = final_df.iloc[:, -1].values         #Store in Y all the diagnosis ("Tripneg","HR+",...)
+    Y = final_df.iloc[:, -1].values
+          #Store in Y all the diagnosis ("Tripneg","HR+",...)
     return X, Y
 
 def FS_ReliefF(X, Y):
@@ -102,7 +103,7 @@ def FS_RFE(X, Y):
 
     Returns:
 
-        X_fil: filtered dataframe
+        X_fil (numpy array): filtered dataframe
     """
 
     estimator = SVC(kernel="linear")
@@ -131,6 +132,7 @@ def FS_IG(X, Y):
     """
 
     # gets the gains vector
+    print(Y)
     gain_vec = mutual_info_classif(X, Y, discrete_features=True)
 
     # gets the indices of columns that can be deleted from the dataset
