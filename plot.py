@@ -46,7 +46,6 @@ def make_plot(feature_selectors,test_list, pred_list):
     for i in range(len(feature_selectors)):
 
         cm = confusion_matrix(test_list[i], pred_list[i],labels,normalize='true')            #This builds a confusion matrix by comparing diagnosis from the Test set (True diagnosis) against the predicted diagnosis (Y_pred)
-        #print(cm)
 
         #Visualize the confusion table
         sns.set(font_scale=1.4) # for label size

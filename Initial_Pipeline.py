@@ -195,11 +195,7 @@ def summarize(scores):
 
     return summary
 
-def cross_validate(X,Y):
-
-    Nsplits = 5
-
-    validator = KFold(n_splits=Nsplits)
+def cross_validate(X,Y,Nsplits):
 
     entries = []
     ind = 0
@@ -215,7 +211,11 @@ def cross_validate(X,Y):
         this_pred_list = []
         this_test_list = []
 
+        testing = []
+
         for iter in range(Niterations):
+
+            validator = KFold(n_splits=Nsplits,shuffle=True)
 
             for train_index, test_index in validator.split(X):
 
@@ -249,9 +249,10 @@ def cross_validate(X,Y):
 
 if __name__ == "__main__":
 
-    features = [10,20,40,50,60,70,80,90,100]
+    features = [10,20,30,40,50,60,70,80,90,100]
     RELIEFF_K = 10
-    Niterations = 2
+    Niterations = 5
+    Nsplits = 4 # for cross validation
     feature_selectors = ["ReliefF","InfoGain"]
     X, Y = process_data()
 
@@ -268,7 +269,7 @@ if __name__ == "__main__":
 
         # different train sets for the feature selection methods
 
-        these_results,pred_list,test_list = cross_validate(X,Y)
+        these_results,pred_list,test_list = cross_validate(X,Y,Nsplits)
 
         results.append(these_results)
 
