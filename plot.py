@@ -22,15 +22,23 @@ def feature_plot(features,feature_selectors,results):
 
         std = []
         mean = []
+        accs = []
+        x_accs = []
 
         for i in range(len(features)):
 
             acc = results[i].loc[results[i]['feature selection'] == selector]['accuracy']
 
+            for point in acc:
+                accs.append(point)
+                x_accs.append(features[i])
+
             std.append(np.std(acc))
             mean.append(np.mean(acc))
 
         plt.errorbar(features, mean, std,label=selector,marker='o',capsize=5)
+        print(np.shape(accs))
+        plt.scatter(x_accs,accs,label=selector,s=2)
 
     plt.legend()
     plt.xlabel('Number of features')
@@ -72,10 +80,44 @@ def make_plot(feature_selectors,test_list, pred_list):
 
 if __name__ == "__main__":
 
-    with open('results.pkl', 'rb') as f:
-        results = pickle.load(f)
+    with open('results.pkl', 'rb') as f1:
+        results = pickle.load(f1)
 
-    features = [10,20,40,50,60,70,80,90,100]
-    feature_selectors = ["ReliefF","InfoGain","RFE"]
+    with open('par_opt.pkl', 'rb') as f2:
+        par_opt = pickle.load(f2)
 
-    feature_plot(features,feature_selectors,results)
+    best = []
+    bestscore = 0
+
+    best_ReliefF = []
+    bestscore_ReliefF = 0
+    best_IG = []
+    bestscore_IG = 0
+    best_RFE = []
+    bestscore_RFE = 0
+
+    for i in range(len(par_opt)):
+
+        if par_opt[i]['selector'] == 'ReliefF':
+            if par_opt[i]['mean'] > bestscore_ReliefF:
+                bestscore_ReliefF = par_opt[i]['mean']
+                best_ReliefF = par_opt[i]
+
+        if par_opt[i]['selector'] == 'InfoGain':
+            if par_opt[i]['mean'] > bestscore_IG:
+                bestscore_IG = par_opt[i]['mean']
+                best_IG = par_opt[i]
+
+        if par_opt[i]['selector'] == 'RFE':
+            if par_opt[i]['mean'] > bestscore_RFE:
+                bestscore_RFE = par_opt[i]['mean']
+                best_RFE = par_opt[i]
+
+        if par_opt[i]['mean'] > bestscore:
+            bestscore = par_opt[i]['mean']
+            best = par_opt[i]
+
+    print(best)
+    print(best_ReliefF)
+    print(best_IG)
+    print(best_RFE)

@@ -204,6 +204,9 @@ def cross_validate(X,Y,Nsplits):
 
     for selector in feature_selectors:
 
+        if selector != 'ReliefF' and RELIEFF_K > 7:
+            continue
+
         print('\n starting with {}...\n'.format(selector))
 
         ind = 0
@@ -250,31 +253,55 @@ def cross_validate(X,Y,Nsplits):
 if __name__ == "__main__":
 
     features = [10,20,30,40,50,60,70,80,90,100]
+    max_iter_list = [800,1000]
     RELIEFF_K = 10
-    Niterations = 5
+    RELIEFF_K_list = [7,8,9]
+    Niterations = 2
     Nsplits = 4 # for cross validation
-    feature_selectors = ["ReliefF","InfoGain"]
+    feature_selectors = ["ReliefF","InfoGain","RFE"]
     X, Y = process_data()
 
-    classifier = SVC(kernel = 'linear', random_state = 0)
-    validator = KFold(n_splits=5)
+    par_opt = []
 
-    results = []
+    for RELIEFF_K in RELIEFF_K_list:
 
-    for N in features:
+        for max_iter in max_iter_list:
 
-        print("\n ----- Now calculating for {} features ------- \n".format(N))
+            classifier = SVC(kernel = 'linear', random_state = 0, max_iter=max_iter)
 
-        N_FEATURES = N
+            results = []
 
-        # different train sets for the feature selection methods
+            for i,N in enumerate(features):
 
-        these_results,pred_list,test_list = cross_validate(X,Y,Nsplits)
+                print("\n ----- Now calculating for {} features ------- \n".format(N))
 
-        results.append(these_results)
+                N_FEATURES = N
 
-    with open('results.pkl', 'wb') as f:
-        pickle.dump(results, f)
+                # different train sets for the feature selection methods
+
+                these_results,pred_list,test_list = cross_validate(X,Y,Nsplits)
+
+                results.append(these_results)
+
+            for selector in feature_selectors:
+
+                for i in range(len(features)):
+
+                    acc = results[i].loc[results[i]['feature selection'] == selector]['accuracy']
+                    std = np.std(acc)
+                    mean = np.mean(acc)
+                    par_opt.append({'selector':selector,
+                                    'features':i,
+                                    'max_iter':max_iter,
+                                    'RELIEFF_K':RELIEFF_K,
+                                    'mean':mean,
+                                    'std':std})
+
+    with open('par_opt.pkl', 'wb') as f1:
+        pickle.dump(par_opt, f1)
+
+    with open('results.pkl', 'wb') as f2:
+        pickle.dump(results, f2)
 
     #plot.feature_plot(features,feature_selectors,results)
 
