@@ -262,6 +262,7 @@ if __name__ == "__main__":
     X, Y = process_data()
 
     par_opt = []
+    par_opt_results = []
 
     for RELIEFF_K in RELIEFF_K_list:
 
@@ -270,6 +271,7 @@ if __name__ == "__main__":
             classifier = SVC(kernel = 'linear', random_state = 0, max_iter=max_iter)
 
             results = []
+            pred_test_results = []
 
             for i,N in enumerate(features):
 
@@ -282,12 +284,14 @@ if __name__ == "__main__":
                 these_results,pred_list,test_list = cross_validate(X,Y,Nsplits)
 
                 results.append(these_results)
+                pred_test_results.append([pred_list,test_list])
 
             for selector in feature_selectors:
 
                 for i in range(len(features)):
 
                     acc = results[i].loc[results[i]['feature selection'] == selector]['accuracy']
+                    pred_test = pred_test_results[i]
                     std = np.std(acc)
                     mean = np.mean(acc)
                     par_opt.append({'selector':selector,
@@ -295,7 +299,9 @@ if __name__ == "__main__":
                                     'max_iter':max_iter,
                                     'RELIEFF_K':RELIEFF_K,
                                     'mean':mean,
-                                    'std':std})
+                                    'std':std,
+                                    'results':acc,
+                                    'pred_test':pred_test_results})
 
     with open('par_opt.pkl', 'wb') as f1:
         pickle.dump(par_opt, f1)
