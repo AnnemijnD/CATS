@@ -18,13 +18,13 @@ from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score
 import seaborn as sns
+import plot
 import itertools
+import pickle
 
 style.use('seaborn-whitegrid')
 sns.set()
 
-N_FEATURES = 40
-RELIEFF_K = 10
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
@@ -172,37 +172,6 @@ def classify(X_train, X_test, Y_train, Y_test):
 
     return score,Y_pred
 
-def make_plot(feature_selectors,test_list, pred_list):
-
-    #Create confusion table based on the prediction values
-    labels=["HER2+","HR+","Triple Neg"]
-
-    for i in range(len(feature_selectors)):
-
-        cm = confusion_matrix(test_list[i], pred_list[i],labels,normalize='true')            #This builds a confusion matrix by comparing diagnosis from the Test set (True diagnosis) against the predicted diagnosis (Y_pred)
-        #print(cm)
-
-        #Visualize the confusion table
-        sns.set(font_scale=1.4) # for label size
-        sns.heatmap(cm, annot=True, annot_kws={"size": 16},xticklabels=labels,yticklabels=labels,cmap="Blues")
-        plt.ylabel('True')
-        plt.xlabel('Predicted')
-        plt.show()
-
-"""def plot_cm(name, model, xtrain, ytrain, xtest, ytest, ax=None, print_report=True):
-    random.seed(0)
-    np.random.seed(0)
-    model.fit(xtrain, ytrain)
-    fig = plot_confusion_matrix(model, xtest, ytest,
-                      cmap=plt.cm.Blues, xticks_rotation='vertical',
-                      normalize='pred', values_format='.2f', ax=ax)
-    fig.ax_.set_title("confusion matrix: "+str(name))
-    ypred = model.predict(xtest)
-    plt.show()
-    if print_report:
-        print("===report:", str(name))
-        print(classification_report(ytest, ypred))
-"""
 def summarize(scores):
     """
 
@@ -227,22 +196,7 @@ def summarize(scores):
 
     return summary
 
-def boxplots_results(results, title=None):
-    """
-    Create a boxplot of the accuracy of the different feature
-    selection methods.
-    """
-    sns.boxplot(x='accuracy',y='classifier',data=results)
-
-    plt.gca().set_title('cross validation results')
-    plt.gca().set_ylabel('classifier')
-    plt.show()
-
-def cross_validate(X,Y):
-
-    Nsplits = 5
-
-    validator = KFold(n_splits=Nsplits)
+def cross_validate(X,Y,Nsplits):
 
     entries = []
     ind = 0
@@ -258,58 +212,72 @@ def cross_validate(X,Y):
         this_pred_list = []
         this_test_list = []
 
-        for train_index, test_index in validator.split(X):
+        testing = []
 
-            ind +=1
+        for iter in range(Niterations):
 
-            print('starting with iteration {} of cross validation for {}'.format(ind,selector))
+            validator = KFold(n_splits=Nsplits,shuffle=True)
 
-            X_train, X_test = X[train_index], X[test_index]
-            Y_train, Y_test = Y[train_index], Y[test_index]
+            for train_index, test_index in validator.split(X):
 
-            if selector == 'ReliefF':
-                X_train_fil,X_test_fil = FS_ReliefF(X_train,Y_train,X_test)
-            if selector == 'RFE':
-                X_train_fil,X_test_fil = FS_RFE(X_train,Y_train,X_test)
-            if selector == 'InfoGain':
-                X_train_fil,X_test_fil = FS_IG(X_train,Y_train,X_test)
+                ind +=1
 
-            score,Y_pred = classify(X_train_fil,X_test_fil,Y_train,Y_test)
+                print('starting with iteration {} of cross validation for {}'.format(ind,selector))
 
-            this_pred_list.append(Y_pred.tolist())
-            this_test_list.append(Y_test.tolist())
+                X_train, X_test = X[train_index], X[test_index]
+                Y_train, Y_test = Y[train_index], Y[test_index]
 
-            entries.append((selector,score))
+                if selector == 'ReliefF':
+                    X_train_fil,X_test_fil = FS_ReliefF(X_train,Y_train,X_test)
+                if selector == 'RFE':
+                    X_train_fil,X_test_fil = FS_RFE(X_train,Y_train,X_test)
+                if selector == 'InfoGain':
+                    X_train_fil,X_test_fil = FS_IG(X_train,Y_train,X_test)
+
+                score,Y_pred = classify(X_train_fil,X_test_fil,Y_train,Y_test)
+
+                this_pred_list.append(Y_pred.tolist())
+                this_test_list.append(Y_test.tolist())
+
+                entries.append((selector,iter,score))
 
         this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
         this_test_list = list(itertools.chain.from_iterable(this_test_list))
         pred_list.append(this_pred_list)
         test_list.append(this_test_list)
 
-    return pd.DataFrame(entries, columns=['classifier', 'accuracy']),pred_list,test_list
+    return pd.DataFrame(entries, columns=['feature selection', 'iteration', 'accuracy']),pred_list,test_list
 
 if __name__ == "__main__":
+
+    features = [10,20,30,40,50,60,70,80,90,100]
+    RELIEFF_K = 10
+    Niterations = 5
+    Nsplits = 4 # for cross validation
+    feature_selectors = ["ReliefF","InfoGain"]
+    X, Y = process_data()
 
     classifier = SVC(kernel = 'linear', random_state = 0)
     validator = KFold(n_splits=5)
 
-    X, Y = process_data()
+    results = []
 
-    # different train sets for the feature selection methods
-    feature_selectors = ["ReliefF","InfoGain","RFE"]
+    for N in features:
 
-    results,pred_list,test_list = cross_validate(X,Y)
+        print("\n ----- Now calculating for {} features ------- \n".format(N))
 
-    print("ACCURACY RESULTS: \n")
-    print(results)
-    boxplots_results(results)
+        N_FEATURES = N
 
-    make_plot(feature_selectors,test_list, pred_list)
+        # different train sets for the feature selection methods
 
+        these_results,pred_list,test_list = cross_validate(X,Y,Nsplits)
 
-    #plot_cm(classifier)
+        results.append(these_results)
 
-    #name, model, xtrain, ytrain, xtest, ytest, ax=None, print_report=True
+    with open('results.pkl', 'wb') as f:
+        pickle.dump(results, f)
+
+    #plot.feature_plot(features,feature_selectors,results)
 
 """Sources:
 https://towardsdatascience.com/building-a-simple-machine-learning-model-on-breast-cancer-data-eca4b3b99fa3
