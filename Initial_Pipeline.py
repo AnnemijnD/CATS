@@ -301,12 +301,12 @@ if __name__ == "__main__":
                                     'mean':mean,
                                     'std':std,
                                     'results':acc,
-                                    'pred_test':pred_test_results})
+                                    'pred_test':pred_test})
 
-    with open('par_opt.pkl', 'wb') as f1:
+    with open('par_opt2.pkl', 'wb') as f1:
         pickle.dump(par_opt, f1)
 
-    with open('results.pkl', 'wb') as f2:
+    with open('results2.pkl', 'wb') as f2:
         pickle.dump(results, f2)
 
     #plot.feature_plot(features,feature_selectors,results)
