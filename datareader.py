@@ -59,22 +59,22 @@ print(dict)
 # # for index, row in dfcall.iterrows():
 # #     print(row)
 #
-# data_url = 'http://bit.ly/2cLzoxH'
-# gapminder = pd.read_csv(data_url)
-# print(gapminder.head(3))
-# df1 = gapminder[['continent', 'year','lifeExp']]
-# print(df1.head())
-# #   continent  year  lifeExp
-# # 0      Asia  1952   28.801
-# # 1      Asia  1957   30.332
-# # 2      Asia  1962   31.997
-# # 3      Asia  1967   34.020
-# # 4      Asia  1972   36.088
-#
-# # pandas pivot
-# heatmap1_data = pd.pivot_table(df1, values='lifeExp',
-#                      index=['continent'],
-#                      columns='year')
-# sns.heatmap(heatmap1_data, cmap="YlGnBu")
+data_url = 'http://bit.ly/2cLzoxH'
+gapminder = pd.read_csv(data_url)
+print(gapminder.head(3))
+df1 = gapminder[['continent', 'year','lifeExp']]
+print(df1.head())
+#   continent  year  lifeExp
+# 0      Asia  1952   28.801
+# 1      Asia  1957   30.332
+# 2      Asia  1962   31.997
+# 3      Asia  1967   34.020
+# 4      Asia  1972   36.088
+
+# pandas pivot
+heatmap1_data = pd.pivot_table(df1, values='lifeExp',
+                     index=['continent'],
+                     columns='year')
+sns.heatmap(heatmap1_data, cmap="YlGnBu")
 
 plt.show()

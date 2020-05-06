@@ -299,7 +299,7 @@ def plot_features():
 
     dict = {"features":features, "accs":accs, "freqs":freqs}
     df = pd.DataFrame(data=dict)
-    # df.to_csv('out.csv', index=False)
+    df.to_csv('out.csv', index=False)
     # plt.scatter(features, accs)
     # for i, txt in enumerate(features):
     #     # plt.annotate(txt, (freqs[i], accs[i]))
@@ -350,7 +350,7 @@ if __name__ == "__main__":
     # RELIEFF_K_list = [7,8,9]
     RELIEFF_K_list = [8]
 
-    Niterations = 2
+    Niterations = 30
     Nsplits = 4 # for cross validation
     # feature_selectors = ["ReliefF","InfoGain","RFE"]
     feature_selectors = ["InfoGain"]
