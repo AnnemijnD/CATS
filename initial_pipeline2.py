@@ -28,7 +28,12 @@ sns.set()
 global CHOSEN_FEAUTURES
 CHOSEN_FEAUTURES = []
 FEAT_ACC = {}
+FEAT_ACCTN = {}
+FEAT_ACCHR = {}
+FEAT_ACCHER2 = {}
 FREQ_FEATURES = {}
+df_heatmap = {"feature":[], "accs":[]}
+df_heatmap2 = {"feature":{}}
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
@@ -238,8 +243,7 @@ def cross_validate(X,Y,Nsplits):
 
                 X_train, X_test = X[train_index], X[test_index]
                 Y_train, Y_test = Y[train_index], Y[test_index]
-                print(X_train)
-                print(Y_train)
+
                 if selector == 'ReliefF':
                     X_train_fil,X_test_fil = FS_ReliefF(X_train,Y_train,X_test)
                 if selector == 'RFE':
@@ -255,9 +259,23 @@ def cross_validate(X,Y,Nsplits):
                 entries.append((selector,iter,score))
 
                 if not selector == "ReliefF":
-                    update_FSstats(score)
-                del CHOSEN_FEAUTURES[:]
+                    types = ["Triple Neg", "HR+", "HER2+"]
+                    typeaccs = []
+                    for type in types:
+                        correct = 0
+                        incorrect = 0
 
+                        for y in range(len(Y_pred)):
+                            if Y_pred[y] == type:
+                                if Y_pred[y] == Y_test[y]:
+                                    correct +=1
+                                else:
+                                    incorrect +=1
+                        acc = correct / (correct + incorrect)
+                        typeaccs.append(acc)
+                    update_FSstats(score, typeaccs, types)
+
+                del CHOSEN_FEAUTURES[:]
 
 
         this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
@@ -268,23 +286,49 @@ def cross_validate(X,Y,Nsplits):
 
 
             # update_FSstats(np.mean(entries[2]))
-    print("FEATACC", FEAT_ACC)
-    print("FREQ_FEATURES", FREQ_FEATURES)
+    # print("FEATACC", FEAT_ACC)
+    # print("FREQ_FEATURES", FREQ_FEATURES)
     plot_features()
     return pd.DataFrame(entries, columns=['feature selection', 'iteration', 'accuracy']),pred_list,test_list
 
-def update_FSstats(accuracy):
+def update_FSstats(score, typeaccs,types):
     global CHOSEN_FEAUTURES
-    for feature in CHOSEN_FEAUTURES:
-        if feature in FEAT_ACC:
-            FEAT_ACC[feature].append(accuracy)
-        else:
-            FEAT_ACC[feature] = [accuracy]
 
+
+    for feature in CHOSEN_FEAUTURES:
         if feature in FREQ_FEATURES:
             FREQ_FEATURES[feature] += 1
         else:
             FREQ_FEATURES[feature] = 1
+
+        if feature in FEAT_ACC:
+            FEAT_ACC[feature].append(score)
+            FEAT_ACCTN[feature].append(typeaccs[0])
+            FEAT_ACCHR[feature].append(typeaccs[1])
+            FEAT_ACCHER2[feature].append(typeaccs[2])
+        else:
+            FEAT_ACC[feature] = [score]
+            FEAT_ACCTN[feature]= [typeaccs[0]]
+            FEAT_ACCHR[feature] = [typeaccs[1]]
+            FEAT_ACCHER2[feature] = [typeaccs[2]]
+
+
+
+        df_heatmap["feature"].append(feature)
+        for type in range(len(types)):
+            if types[type] in df_heatmap:
+                df_heatmap[types[type]].append(typeaccs[type])
+            else:
+                df_heatmap[types[type]] = [typeaccs[type]]
+        df_heatmap["accs"].append(score)
+
+
+
+
+
+
+
+
 
 
 
@@ -292,10 +336,31 @@ def plot_features():
     features = []
     accs = []
     freqs = []
+    accsTN = []
+    accsHR = []
+    accsHER = []
     for feature in FREQ_FEATURES.keys():
         features.append(feature)
         accs.append(np.mean(FEAT_ACC[feature]))
         freqs.append(FREQ_FEATURES[feature])
+        accsTN.append(np.mean(FEAT_ACCTN[feature]))
+        accsHR.append(np.mean(FEAT_ACCHR[feature]))
+        accsHER.append(np.mean(FEAT_ACCHER2[feature]))
+    print(len(freqs))
+    print(len(features))
+    print()
+    accstypes = [accsTN, accsHR, accsHER]
+    types = ["TN", "HR+", "HER2+"]
+    dict2 = {"features":[], "type":[], "accuracy":[], "freqs":[]}
+    for feature in range(len(features)):
+        for i in range(len(accstypes)):
+            dict2["features"].append(features[feature])
+            dict2["type"].append(types[i])
+            dict2["accuracy"].append(accstypes[i][feature])
+            dict2["freqs"].append(freqs[feature])
+
+    df = pd.DataFrame(data=dict2)
+    df.to_csv('heatmap.csv', index=False)
 
     dict = {"features":features, "accs":accs, "freqs":freqs}
     df = pd.DataFrame(data=dict)
@@ -317,26 +382,26 @@ def plot_features():
     ax = plt.gca()
     # ax.set_facecolor('#e9e9e9')
     plt.grid(color='white')
-    # plt.show()
+    plt.show()
     # data_url = 'http://bit.ly/2cLzoxH'
     # gapminder = pd.read_csv(data_url)
     # print(gapminder.head(3))
-    # df1 = gapminder[['continent', 'year','lifeExp']]
-    # print(df1.head())
-    # #   continent  year  lifeExp
-    # # 0      Asia  1952   28.801
-    # # 1      Asia  1957   30.332
-    # # 2      Asia  1962   31.997
-    # # 3      Asia  1967   34.020
-    # # 4      Asia  1972   36.088
-    #
-    # # ind   feature type acc freq
-    #
-    #
-    # # pandas pivot
-    # heatmap1_data = pd.pivot_table(df1, values='lifeExp',
-    #                      index=['continent'],
-    #                      columns='year')
+    # df1 = pd.DataFrame(data=dict2)
+    # # print(df1.head())
+    # # #   continent  year  lifeExp
+    # # # 0      Asia  1952   28.801
+    # # # 1      Asia  1957   30.332
+    # # # 2      Asia  1962   31.997
+    # # # 3      Asia  1967   34.020
+    # # # 4      Asia  1972   36.088
+    # #
+    # # # ind   feature type acc freq
+    # #
+    # #
+    # # # pandas pivot
+    # heatmap1_data = pd.pivot_table(df1, values='accuracy',
+    #                      index=['type'],
+    #                      columns='features')
     # sns.heatmap(heatmap1_data, cmap="YlGnBu")
     # plt.show()
 

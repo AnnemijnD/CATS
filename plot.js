@@ -6,7 +6,7 @@
                 });
                 // makeVis(data);
             });
-            d3.csv('out.csv', function loadCallback(error, data) {
+            d3.csv('IG100.csv', function loadCallback(error, data) {
                 data.forEach(function(d) { // convert strings to numbers
                     d.accs = +d.accs;
                     d.freqs = +d.freqs;
