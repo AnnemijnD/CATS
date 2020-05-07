@@ -11,6 +11,11 @@ print(df1.head())
 df1 = df1.sort_values(by=['freqs'])
 df1.to_csv("heatmap.csv", index=False)
 print(df1.head())
+df1 = pd.read_csv("heatmap_ordfeat.csv")
+print(df1.head())
+df1 = df1.sort_values(by=['features'])
+df1.to_csv("heatmap_ordfeat.csv", index=False)
+print(df1.head())
 # # print(df1.head())
 # # #   continent  year  lifeExp
 # # # 0      Asia  1952   28.801
