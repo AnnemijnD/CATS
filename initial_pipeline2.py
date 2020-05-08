@@ -322,16 +322,6 @@ def update_FSstats(score, typeaccs,types):
                 df_heatmap[types[type]] = [typeaccs[type]]
         df_heatmap["accs"].append(score)
 
-
-
-
-
-
-
-
-
-
-
 def plot_features():
     features = []
     accs = []

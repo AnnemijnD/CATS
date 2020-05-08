@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.style as style
 from ReliefF import ReliefF
 from sklearn.feature_selection import RFE
+from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVR
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
@@ -21,14 +22,13 @@ import plot
 import itertools
 import pickle
 from mpl_toolkits.mplot3d import Axes3D
-import features as ft
+import Features as ft
 
 style.use('seaborn-whitegrid')
 sns.set()
 global CHOSEN_FEAUTURES
 CHOSEN_FEAUTURES = []
-FEAT_ACC = {}
-FREQ_FEATURES = {}
+
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
@@ -205,6 +205,46 @@ def summarize(scores):
 
     return summary
 
+def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,Nfeatures):
+
+    validator_out = Kfold(Nsplits_out)
+
+    for train_index_out,test_index_out in validator_out.split(X):
+
+        X_train_out, X_test_out = X[train_index_out], X[test_index_out]
+        Y_train_out, Y_test_out = Y[train_index_out], Y[test_index_out]
+
+        if selector == 'ReliefF':
+            X_train_fil,X_test_fil = FS_ReliefF(X_train_in,Y_train_in,X_test_in)
+        if selector == 'RFE':
+            X_train_fil,X_test_fil = FS_RFE(X_train_in,Y_train_in,X_test_in)
+        if selector == 'InfoGain':
+            X_train_fil,X_test_fil = FS_IG(X_train_in,Y_train_in,X_test_in)
+
+        classifier = SVC()
+
+
+
+        par_opt = GridSearchCV(estimator = classifier,
+                    param_grid = tests[i], iid=False,
+                    cv=5, verbose=5,
+                    refit='Accuracy')
+
+
+
+
+        for train_index_in,test_index_in in validator_in.split(X_train_out):
+
+            X_train_in, X_test_in = X[train_index_in], X[test_index_in]
+            Y_train_in, Y_test_in = Y[train_index_in], Y[test_index_in]
+
+
+
+
+
+            par_opt.fit(X_train_fil,Y_train_in)
+
+
 def cross_validate(X,Y,Nsplits):
     global CHOSEN_FEAUTURES
 
@@ -238,8 +278,7 @@ def cross_validate(X,Y,Nsplits):
 
                 X_train, X_test = X[train_index], X[test_index]
                 Y_train, Y_test = Y[train_index], Y[test_index]
-                print(X_train)
-                print(Y_train)
+
                 if selector == 'ReliefF':
                     X_train_fil,X_test_fil = FS_ReliefF(X_train,Y_train,X_test)
                 if selector == 'RFE':
@@ -254,19 +293,17 @@ def cross_validate(X,Y,Nsplits):
 
                 entries.append((selector,iter,score))
 
-                if not selector == "ReliefF":
-                    ft.update_FSstats(score)
-                del CHOSEN_FEAUTURES[:]
+                #if not selector == "ReliefF":
+                #    ft.update_FSstats(score,CHOSEN_FEAUTURES)
+                #del CHOSEN_FEAUTURES[:]
 
         this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
         this_test_list = list(itertools.chain.from_iterable(this_test_list))
         pred_list.append(this_pred_list)
         test_list.append(this_test_list)
 
-            # update_FSstats(np.mean(entries[2]))
-    print("FEATACC", FEAT_ACC)
-    print("FREQ_FEATURES", FREQ_FEATURES)
-    ft.plot_features()
+    #ft.plot_features()
+
     return pd.DataFrame(entries, columns=['feature selection', 'iteration', 'accuracy']),pred_list,test_list
 
 if __name__ == "__main__":
@@ -333,7 +370,7 @@ if __name__ == "__main__":
     with open('results2.pkl', 'wb') as f2:
         pickle.dump(results, f2)
 
-    #plot.feature_plot(features,feature_selectors,results)
+    plot.feature_plot(features,feature_selectors,results)
 
 """Sources:
 https://towardsdatascience.com/building-a-simple-machine-learning-model-on-breast-cancer-data-eca4b3b99fa3
