@@ -3,13 +3,13 @@
 # and plot the results using a confusion table. I tried a randomized CV method with 25% and SVM as classifier,
 # but we can change the methods easily. Note that there IS NO feature selection method at all, this needs to be implemented.
 
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.style as style
 from ReliefF import ReliefF
 from sklearn.feature_selection import RFE
-from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVR
 from sklearn.svm import SVC
 from sklearn.metrics import confusion_matrix
@@ -22,13 +22,21 @@ import plot
 import itertools
 import pickle
 from mpl_toolkits.mplot3d import Axes3D
-import Features as ft
 
 style.use('seaborn-whitegrid')
 sns.set()
+
 global CHOSEN_FEAUTURES
 CHOSEN_FEAUTURES = []
-
+FEAT_ACC = {}
+FEAT_ACCTN = {}
+FEAT_ACCHR = {}
+FEAT_ACCHER2 = {}
+FREQ_FEATURES = {}
+df_heatmap = {"feature":[], "accs":[]}
+K = 0
+MAX_ITER = 0
+N_FEATURES = 0
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
@@ -94,9 +102,13 @@ def FS_ReliefF(X_train,Y_train,X_test):
 
         X_fil: filtered dataframe
     """
+    # global CHOSEN_FEAUTURES
     fs = ReliefF(n_neighbors=RELIEFF_K, n_features_to_keep=N_FEATURES)
 
     fs.fit(X_train,Y_train)
+    chosen_features = fs.top_features[:N_FEATURES]
+    for el in chosen_features:
+        CHOSEN_FEAUTURES.append(el)
 
     X_train_fil = fs.transform(X_train)
     X_test_fil = fs.transform(X_test)
@@ -115,9 +127,8 @@ def FS_RFE(X_train, Y_train,X_test):
 
         X_fil (numpy array): filtered dataframe
     """
-
     estimator = SVC(kernel="linear")
-    selector = RFE(estimator, N_FEATURES, step=1)
+    selector = RFE(estimator,N_FEATURES, step=1)
     selector = selector.fit(X_train, Y_train)
 
     # construct mask
@@ -209,41 +220,90 @@ def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,Nfeatures):
 
     validator_out = Kfold(Nsplits_out)
 
+    ind_out = 0
+
     for train_index_out,test_index_out in validator_out.split(X):
+
+        ind_out += 1
+
+        print('\n starting with outer CV {} for {}...\n'.format(selector))
 
         X_train_out, X_test_out = X[train_index_out], X[test_index_out]
         Y_train_out, Y_test_out = Y[train_index_out], Y[test_index_out]
 
-        if selector == 'ReliefF':
-            X_train_fil,X_test_fil = FS_ReliefF(X_train_in,Y_train_in,X_test_in)
-        if selector == 'RFE':
-            X_train_fil,X_test_fil = FS_RFE(X_train_in,Y_train_in,X_test_in)
-        if selector == 'InfoGain':
-            X_train_fil,X_test_fil = FS_IG(X_train_in,Y_train_in,X_test_in)
+        validator_out = Kfold(Nsplits_in)
 
-        classifier = SVC()
-
-
-
-        par_opt = GridSearchCV(estimator = classifier,
-                    param_grid = tests[i], iid=False,
-                    cv=5, verbose=5,
-                    refit='Accuracy')
-
-
-
+        ind_in = 0
 
         for train_index_in,test_index_in in validator_in.split(X_train_out):
+
+            ind_in += 1
+
+            print('starting with inner iteration {} of outer CV {} for {}'.format(ind_in,ind_out,selector))
 
             X_train_in, X_test_in = X[train_index_in], X[test_index_in]
             Y_train_in, Y_test_in = Y[train_index_in], Y[test_index_in]
 
+            parameter_optimization(X_train_in,Y_train_in,X_test_in)
 
+            if selector == 'ReliefF':
+                X_train_fil,X_test_fil = FS_ReliefF(X_train_in,Y_train_in,X_test_in)
+            if selector == 'RFE':
+                X_train_fil,X_test_fil = FS_RFE(X_train_in,Y_train_in,X_test_in)
+            if selector == 'InfoGain':
+                X_train_fil,X_test_fil = FS_IG(X_train_in,Y_train_in,X_test_in)
 
-
+            score,Y_pred = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in)
 
             par_opt.fit(X_train_fil,Y_train_in)
 
+def parameter_optimization(X_train_in,Y_train_in,X_test_in):
+
+    # features = [10,20,30,40,50,60,70,80,90,100]
+    features = [30]
+    # max_iter_list = [800,1000]
+    max_iter_list = [800]
+    # RELIEFF_K = 10
+    RELIEFF_K = 9
+    # RELIEFF_K_list = [7,8,9]
+    RELIEFF_K_list = [9]
+
+    Niterations = 1
+    Nsplits = 4 # for cross validation
+    # feature_selectors = ["ReliefF","InfoGain","RFE"]
+    feature_selectors = ["InfoGain", "ReliefF", "RFE"]
+    X, Y = process_data()
+
+    par_opt = []
+    par_opt_results = []
+
+    for selector in feature_selectors:
+
+        for RELIEFF_K in RELIEFF_K_list:
+
+            for max_iter in max_iter_list:
+
+                classifier = SVC(kernel = 'linear', random_state = 0, max_iter=max_iter)
+
+                
+
+                results = []
+                pred_test_results = []
+
+                for i,N in enumerate(features):
+
+                    print("\n ----- Now calculating for {} features ------- \n".format(N))
+
+                    N_FEATURES = N
+                    MAX_ITER = max_iter
+                    K = RELIEFF_K
+
+                    # different train sets for the feature selection methods
+
+                    these_results,pred_list,test_list = cross_validate(X,Y,Nsplits)
+
+                    results.append(these_results)
+                    pred_test_results.append([pred_list,test_list])
 
 def cross_validate(X,Y,Nsplits):
     global CHOSEN_FEAUTURES
@@ -293,18 +353,86 @@ def cross_validate(X,Y,Nsplits):
 
                 entries.append((selector,iter,score))
 
-                #if not selector == "ReliefF":
-                #    ft.update_FSstats(score,CHOSEN_FEAUTURES)
-                #del CHOSEN_FEAUTURES[:]
+                types = ["Triple Neg", "HR+", "HER2+"]
+                typeaccs = []
+                for type in types:
+                    correct = 0
+                    incorrect = 0
+
+                    for y in range(len(Y_pred)):
+                        if Y_pred[y] == type:
+                            if Y_pred[y] == Y_test[y]:
+                                correct +=1
+                            else:
+                                incorrect +=1
+                    acc = correct / (correct + incorrect)
+                    typeaccs.append(acc)
+
+                update_FSstats(score, typeaccs, types)
+                del CHOSEN_FEAUTURES[:]
+
 
         this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
         this_test_list = list(itertools.chain.from_iterable(this_test_list))
         pred_list.append(this_pred_list)
         test_list.append(this_test_list)
 
-    #ft.plot_features()
-
+        save_features(selector)
     return pd.DataFrame(entries, columns=['feature selection', 'iteration', 'accuracy']),pred_list,test_list
+
+def update_FSstats(score, typeaccs,types):
+    global CHOSEN_FEAUTURES
+
+
+    for feature in CHOSEN_FEAUTURES:
+        if feature in FREQ_FEATURES:
+            FREQ_FEATURES[feature] += 1
+        else:
+            FREQ_FEATURES[feature] = 1
+
+        if feature in FEAT_ACC:
+            FEAT_ACC[feature].append(score)
+            FEAT_ACCTN[feature].append(typeaccs[0])
+            FEAT_ACCHR[feature].append(typeaccs[1])
+            FEAT_ACCHER2[feature].append(typeaccs[2])
+        else:
+            FEAT_ACC[feature] = [score]
+            FEAT_ACCTN[feature]= [typeaccs[0]]
+            FEAT_ACCHR[feature] = [typeaccs[1]]
+            FEAT_ACCHER2[feature] = [typeaccs[2]]
+
+def save_features(selector):
+    features = []
+    accs = []
+    freqs = []
+    accsTN = []
+    accsHR = []
+    accsHER = []
+    for feature in FREQ_FEATURES.keys():
+        features.append(feature)
+        accs.append(np.mean(FEAT_ACC[feature]))
+        freqs.append(FREQ_FEATURES[feature])
+        accsTN.append(np.mean(FEAT_ACCTN[feature]))
+        accsHR.append(np.mean(FEAT_ACCHR[feature]))
+        accsHER.append(np.mean(FEAT_ACCHER2[feature]))
+
+    accstypes = [accsTN, accsHR, accsHER]
+    types = ["TN", "HR+", "HER2+"]
+    dict2 = {"features":[], "type":[], "accuracy":[], "freqs":[]}
+    for feature in range(len(features)):
+        for i in range(len(accstypes)):
+            dict2["features"].append(features[feature])
+            dict2["type"].append(types[i])
+            dict2["accuracy"].append(accstypes[i][feature])
+            dict2["freqs"].append(freqs[feature])
+
+
+    df = pd.DataFrame(data=dict2)
+    df = df.sort_values(by=['freqs'])
+    df.to_csv(f'results_features/paramopt/heatmap_{selector}_K={K}_MAX_ITER={MAX_ITER}_N={N_FEATURES}.csv', index=False)
+    # df = df.sort_values(by=['features'])
+    # df.to_csv(f'results_features/heatmap_{selector}_feat.csv', index=False)
+
 
 if __name__ == "__main__":
 
@@ -312,14 +440,15 @@ if __name__ == "__main__":
     features = [30]
     # max_iter_list = [800,1000]
     max_iter_list = [800]
-    RELIEFF_K = 10
+    # RELIEFF_K = 10
+    RELIEFF_K = 9
     # RELIEFF_K_list = [7,8,9]
-    RELIEFF_K_list = [8]
+    RELIEFF_K_list = [9]
 
-    Niterations = 2
+    Niterations = 1
     Nsplits = 4 # for cross validation
     # feature_selectors = ["ReliefF","InfoGain","RFE"]
-    feature_selectors = ["InfoGain"]
+    feature_selectors = ["InfoGain", "ReliefF", "RFE"]
     X, Y = process_data()
 
     par_opt = []
@@ -339,6 +468,8 @@ if __name__ == "__main__":
                 print("\n ----- Now calculating for {} features ------- \n".format(N))
 
                 N_FEATURES = N
+                MAX_ITER = max_iter
+                K = RELIEFF_K
 
                 # different train sets for the feature selection methods
 
@@ -370,7 +501,7 @@ if __name__ == "__main__":
     with open('results2.pkl', 'wb') as f2:
         pickle.dump(results, f2)
 
-    plot.feature_plot(features,feature_selectors,results)
+    #plot.feature_plot(features,feature_selectors,results)
 
 """Sources:
 https://towardsdatascience.com/building-a-simple-machine-learning-model-on-breast-cancer-data-eca4b3b99fa3

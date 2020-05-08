@@ -115,7 +115,7 @@ def FS_ReliefF(X_train,Y_train,X_test):
 
     return X_train_fil,X_test_fil
 
-def FS_RFE(X_train, Y_train,X_test):
+def FS_RFE(X_train, Y_train,X_test,classifier):
     """
     Feature selection using RFE-SVM
 
@@ -127,8 +127,8 @@ def FS_RFE(X_train, Y_train,X_test):
 
         X_fil (numpy array): filtered dataframe
     """
-    estimator = SVC(kernel="linear")
-    selector = RFE(estimator,N_FEATURES, step=1)
+
+    selector = RFE(classifier,N_FEATURES, step=RFE_STEP)
     selector = selector.fit(X_train, Y_train)
 
     # construct mask
@@ -158,7 +158,7 @@ def FS_IG(X_train,Y_train,X_test):
     """
 
     # gets the gains vector
-    gain_vec = mutual_info_classif(X_train, Y_train, discrete_features=True)
+    gain_vec = mutual_info_classif(X_train, Y_train,n_neighbors=IG_NEIGHBOURS,discrete_features=True)
 
     # gets the indices of columns that can be deleted from the dataset
     delete_ind = gain_vec.argsort()[::-1][N_FEATURES:]
@@ -216,7 +216,7 @@ def summarize(scores):
 
     return summary
 
-def cross_validate(X,Y,Nsplits):
+def cross_validate(X,Y,Nsplits,classifier):
     global CHOSEN_FEAUTURES
 
     entries = []
@@ -253,7 +253,7 @@ def cross_validate(X,Y,Nsplits):
                 if selector == 'ReliefF':
                     X_train_fil,X_test_fil = FS_ReliefF(X_train,Y_train,X_test)
                 if selector == 'RFE':
-                    X_train_fil,X_test_fil = FS_RFE(X_train,Y_train,X_test)
+                    X_train_fil,X_test_fil = FS_RFE(X_train,Y_train,X_test,classifier)
                 if selector == 'InfoGain':
                     X_train_fil,X_test_fil = FS_IG(X_train,Y_train,X_test)
 
@@ -263,7 +263,6 @@ def cross_validate(X,Y,Nsplits):
                 this_test_list.append(Y_test.tolist())
 
                 entries.append((selector,iter,score))
-
 
                 types = ["Triple Neg", "HR+", "HER2+"]
                 typeaccs = []
@@ -277,12 +276,14 @@ def cross_validate(X,Y,Nsplits):
                                 correct +=1
                             else:
                                 incorrect +=1
-                    acc = correct / (correct + incorrect)
+                    try:
+                        acc = correct / (correct + incorrect)
+                    except:
+                        acc = ['none incorrect',correct,incorrect]
                     typeaccs.append(acc)
 
                 update_FSstats(score, typeaccs, types)
                 del CHOSEN_FEAUTURES[:]
-
 
         this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
         this_test_list = list(itertools.chain.from_iterable(this_test_list))
@@ -294,7 +295,6 @@ def cross_validate(X,Y,Nsplits):
 
 def update_FSstats(score, typeaccs,types):
     global CHOSEN_FEAUTURES
-
 
     for feature in CHOSEN_FEAUTURES:
         if feature in FREQ_FEATURES:
@@ -345,67 +345,88 @@ def save_features(selector):
     # df = df.sort_values(by=['features'])
     # df.to_csv(f'results_features/heatmap_{selector}_feat.csv', index=False)
 
-
 if __name__ == "__main__":
 
-    # features = [10,20,30,40,50,60,70,80,90,100]
-    features = [30]
-    # max_iter_list = [800,1000]
-    max_iter_list = [800]
-    # RELIEFF_K = 10
-    RELIEFF_K = 9
-    # RELIEFF_K_list = [7,8,9]
-    RELIEFF_K_list = [9]
+    # SVC optimization
+    degrees = [0, 1, 2, 3, 4, 5, 6]
+    cs = [0.1, 1, 10, 100, 1000]
+    max_iter_list = [600,700,800,1000,1100]
 
-    Niterations = 1
-    Nsplits = 4 # for cross validation
-    # feature_selectors = ["ReliefF","InfoGain","RFE"]
-    feature_selectors = ["InfoGain", "ReliefF", "RFE"]
+    # number of features
+    features = [10,20,30,40,50,60,70,80,90,100]
+
+    # feature selector optimization
+    RELIEFF_K_list = [5,6,7,8,9,10]
+    RFE_step_list = [1,2,3]
+    IG_neighbours_list = [2,3,4,5,6,7]
+
+    Niterations = 5
+
+    Nsplits_list = [3,4,5]
+
+    feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
+
     X, Y = process_data()
 
     par_opt = []
     par_opt_results = []
 
-    for RELIEFF_K in RELIEFF_K_list:
+    for Nsplits in Nsplits_list:
 
-        for max_iter in max_iter_list:
+        for IG_NEIGHBOURS in IG_neighbours_list:
 
-            classifier = SVC(kernel = 'linear', random_state = 0, max_iter=max_iter)
+            for RFE_STEP in RFE_step_list:
 
-            results = []
-            pred_test_results = []
+                for RELIEFF_K in RELIEFF_K_list:
 
-            for i,N in enumerate(features):
+                    for max_iter in max_iter_list:
 
-                print("\n ----- Now calculating for {} features ------- \n".format(N))
+                        for c in cs:
 
-                N_FEATURES = N
-                MAX_ITER = max_iter
-                K = RELIEFF_K
+                            for degree in degrees:
 
-                # different train sets for the feature selection methods
+                                classifier = SVC(kernel='linear',C=c,degree=degree,max_iter=max_iter)
 
-                these_results,pred_list,test_list = cross_validate(X,Y,Nsplits)
+                                results = []
+                                pred_test_results = []
 
-                results.append(these_results)
-                pred_test_results.append([pred_list,test_list])
+                                for i,N in enumerate(features):
 
-            for selector in feature_selectors:
+                                    print("\n ----- Now calculating for {} features ------- \n".format(N))
 
-                for i in range(len(features)):
+                                    N_FEATURES = N
+                                    MAX_ITER = max_iter
+                                    K = RELIEFF_K
 
-                    acc = results[i].loc[results[i]['feature selection'] == selector]['accuracy']
-                    pred_test = pred_test_results[i]
-                    std = np.std(acc)
-                    mean = np.mean(acc)
-                    par_opt.append({'selector':selector,
-                                    'features':i,
-                                    'max_iter':max_iter,
-                                    'RELIEFF_K':RELIEFF_K,
-                                    'mean':mean,
-                                    'std':std,
-                                    'results':acc,
-                                    'pred_test':pred_test})
+                                    # different train sets for the feature selection methods
+
+                                    these_results,pred_list,test_list = cross_validate(X,Y,Nsplits,classifier)
+
+                                    results.append(these_results)
+                                    pred_test_results.append([pred_list,test_list])
+
+                                for selector in feature_selectors:
+
+                                    for i in range(len(features)):
+
+                                        acc = results[i].loc[results[i]['feature selection'] == selector]['accuracy']
+                                        pred_test = pred_test_results[i]
+                                        std = np.std(acc)
+                                        mean = np.mean(acc)
+                                        par_opt.append({'selector':selector,
+                                                        'features':i,
+                                                        'max_iter':max_iter,
+                                                        'cs':c,
+                                                        'degrees':degree,
+                                                        'RELIEFF_K':RELIEFF_K,
+                                                        'RFE_STEP':RFE_STEP,
+                                                        'IG_NEIGHBOURS':IG_NEIGHBOURS,
+                                                        'mean':mean,
+                                                        'std':std,
+                                                        'results':acc,
+                                                        'Nsplits':Nsplits,
+                                                        'pred_test':pred_test
+                                                        })
 
     with open('par_opt2.pkl', 'wb') as f1:
         pickle.dump(par_opt, f1)
