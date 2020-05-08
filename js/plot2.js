@@ -1,6 +1,16 @@
 
-
-            d3.csv('../../results_features/IG100.csv', function loadCallback(error, data) {
+var datapath = "../";
+try {
+  d3.csv(datapath + "results_features/heatmap_InfoGain_freq.csv", function(data) {
+    console.log(data)
+  })
+}
+catch(err) {
+  datapath = "../../"
+  d3.csv(datapath + "results_features/heatmap_InfoGain_freq.csv", function(data) {
+    console.log(data)})
+}
+            d3.csv(datapath + 'results_features/IG100.csv', function loadCallback(error, data) {
                 data.forEach(function(d) { // convert strings to numbers
                     d.accs = +d.accs;
                     d.freqs = +d.freqs;

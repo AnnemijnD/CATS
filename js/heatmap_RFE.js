@@ -9,7 +9,18 @@ var margin = {top: 30, right: 30, bottom: 30, left: 30},
   height = 450 - margin.top - margin.bottom;
 
 
-d3.csv("../../results_features/heatmap_RFE_freq.csv", function(data) {
+  var datapath = "../";
+  try {
+    d3.csv(datapath + "results_features/heatmap_RFE_freq.csv", function(data) {
+      console.log(data)
+    })
+  }
+  catch(err) {
+    datapath = "../../"
+    d3.csv(datapath + "results_features/heatmap_RFE_freq.csv", function(data) {
+      console.log(data)})
+  }
+  d3.csv(datapath+ "results_features/heatmap_RFE_freq.csv", function(data) {
 var feature_array = [];
 var type_array = [];
 
@@ -121,7 +132,18 @@ var margin = {top: 30, right: 30, bottom: 30, left: 30},
 //Read the data
 // d3.csv("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/heatmap_data.csv", function(data) {
 // console.log(data)})
-d3.csv("../../results_features/heatmap_RFE_feat.csv", function(data) {
+var datapath = "../";
+try {
+  d3.csv(datapath + "results_features/heatmap_RFE_feat.csv", function(data) {
+    console.log(data)
+  })
+}
+catch(err) {
+  datapath = "../../"
+  d3.csv(datapath + "results_features/heatmap_RFE_feat.csv", function(data) {
+    console.log(data)})
+}
+d3.csv(datapath+ "results_features/heatmap_RFE_feat.csv", function(data) {
 var feature_array = [];
 var type_array = [];
 
