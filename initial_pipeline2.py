@@ -99,8 +99,7 @@ def FS_ReliefF(X_train,Y_train,X_test):
         X_fil: filtered dataframe
     """
     # global CHOSEN_FEAUTURES
-    n_features = 90
-    fs = ReliefF(n_neighbors=RELIEFF_K, n_features_to_keep=n_features)
+    fs = ReliefF(n_neighbors=RELIEFF_K, n_features_to_keep=N_FEATURES)
 
     fs.fit(X_train,Y_train)
     chosen_features = fs.top_features[:N_FEATURES]
@@ -124,9 +123,8 @@ def FS_RFE(X_train, Y_train,X_test):
 
         X_fil (numpy array): filtered dataframe
     """
-    n_features = 50
     estimator = SVC(kernel="linear")
-    selector = RFE(estimator, n_features, step=1)
+    selector = RFE(estimator,N_FEATURES, step=1)
     selector = selector.fit(X_train, Y_train)
 
     # construct mask
@@ -159,8 +157,7 @@ def FS_IG(X_train,Y_train,X_test):
     gain_vec = mutual_info_classif(X_train, Y_train, discrete_features=True)
 
     # gets the indices of columns that can be deleted from the dataset
-    n_features = 60
-    delete_ind = gain_vec.argsort()[::-1][n_features:]
+    delete_ind = gain_vec.argsort()[::-1][N_FEATURES:]
     for i in range(len(gain_vec)):
         if i not in delete_ind:
             CHOSEN_FEAUTURES.append(i)
@@ -280,7 +277,6 @@ def cross_validate(X,Y,Nsplits):
                     typeaccs.append(acc)
 
                 update_FSstats(score, typeaccs, types)
-                print(CHOSEN_FEAUTURES)
                 del CHOSEN_FEAUTURES[:]
 
 
