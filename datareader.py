@@ -16,42 +16,49 @@ dfcall = dfcall.transpose()
 # df.loc[indices,'A'] = 16
 dfcall["Subgroup"] = 0
 
-for index1, row1 in dfcall.iterrows():
-    # print(index1)
-
-    for index2, row2 in dfclin.iterrows():
-        if index1 == row2["Sample"]:
-            # print(row2["Sample"])
-            dfcall.loc[index1, "Subgroup"] = row2["Subgroup"]
-
-            continue
-
-# print(dfcall)
-patients = []
-exceptions = ["Chromosome", "Start","End", "Nclone"]
+dict = {}
 for index1, row1 in dfclin.iterrows():
-    if index1 in exceptions:
-        continue
+    # print(row1["Subgroup"])
+    if row1["Subgroup"] in dict:
+        dict[row1["Subgroup"]] += 1
     else:
-
-        patient = Patient(index1, row1["Subgroup"])
-        patients.append(patient)
-        chromosomedict = {}
-
-for label, content in dfcall.iteritems():
-    print(content)
-
-
-
-# for patient in patients:
-#     print(patient)
-
-
-
-
-# for index, row in dfcall.iterrows():
-#     print(row)
-
+        dict[row1["Subgroup"]] = 0
+print(dict)
+#     # print(index1)
+#
+#     for index2, row2 in dfclin.iterrows():
+#         if index1 == row2["Sample"]:
+#             # print(row2["Sample"])
+#             dfcall.loc[index1, "Subgroup"] = row2["Subgroup"]
+#
+#             continue
+#
+# # print(dfcall)
+# patients = []
+# exceptions = ["Chromosome", "Start","End", "Nclone"]
+# for index1, row1 in dfclin.iterrows():
+#     if index1 in exceptions:
+#         continue
+#     else:
+#
+#         patient = Patient(index1, row1["Subgroup"])
+#         patients.append(patient)
+#         chromosomedict = {}
+#
+# for label, content in dfcall.iteritems():
+#     print(content)
+#
+#
+#
+# # for patient in patients:
+# #     print(patient)
+#
+#
+#
+#
+# # for index, row in dfcall.iterrows():
+# #     print(row)
+#
 data_url = 'http://bit.ly/2cLzoxH'
 gapminder = pd.read_csv(data_url)
 print(gapminder.head(3))

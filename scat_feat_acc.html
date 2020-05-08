@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>d3 Scatter Plot</title>
+        <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <!-- Styles for our vis  -->
+        <style>
+        body {
+            font: 15px sans-serif;
+        }
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #000;
+            shape-rendering: crispEdges;
+        }
+
+        .dot {
+            stroke: none;
+        }
+        .tooltip {
+            position: absolute;
+            font-size: 12px;
+            width:  auto;
+            height: auto;
+            pointer-events: none;
+            background-color: white;
+        }
+         </style>
+    </head>
+    <body>
+        <div id="vis-container"></div>
+
+        <!-- Optionally reference your vis JS file here, or define in a script tag -->
+        <!-- <script type="text/javascript" src="js/my-vis.js"></script> -->
+        <script type="text/javascript" src="plot.js"></script>
+    </body>
+</html>
