@@ -1,12 +1,6 @@
 
-            d3.csv('cereal.csv', function loadCallback(error, data) {
-                data.forEach(function(d) { // convert strings to numbers
-                    d.calories = +d.calories;
-                    d.sugar = +d.sugar;
-                });
-                // makeVis(data);
-            });
-            d3.csv('IG100.csv', function loadCallback(error, data) {
+
+            d3.csv('../../results_features/IG100.csv', function loadCallback(error, data) {
                 data.forEach(function(d) { // convert strings to numbers
                     d.accs = +d.accs;
                     d.freqs = +d.freqs;

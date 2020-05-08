@@ -33,7 +33,6 @@ FEAT_ACCHR = {}
 FEAT_ACCHER2 = {}
 FREQ_FEATURES = {}
 df_heatmap = {"feature":[], "accs":[]}
-df_heatmap2 = {"feature":{}}
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
@@ -99,9 +98,14 @@ def FS_ReliefF(X_train,Y_train,X_test):
 
         X_fil: filtered dataframe
     """
-    fs = ReliefF(n_neighbors=RELIEFF_K, n_features_to_keep=N_FEATURES)
+    # global CHOSEN_FEAUTURES
+    n_features = 90
+    fs = ReliefF(n_neighbors=RELIEFF_K, n_features_to_keep=n_features)
 
     fs.fit(X_train,Y_train)
+    chosen_features = fs.top_features[:N_FEATURES]
+    for el in chosen_features:
+        CHOSEN_FEAUTURES.append(el)
 
     X_train_fil = fs.transform(X_train)
     X_test_fil = fs.transform(X_test)
@@ -120,9 +124,9 @@ def FS_RFE(X_train, Y_train,X_test):
 
         X_fil (numpy array): filtered dataframe
     """
-
+    n_features = 50
     estimator = SVC(kernel="linear")
-    selector = RFE(estimator, N_FEATURES, step=1)
+    selector = RFE(estimator, n_features, step=1)
     selector = selector.fit(X_train, Y_train)
 
     # construct mask
@@ -155,7 +159,8 @@ def FS_IG(X_train,Y_train,X_test):
     gain_vec = mutual_info_classif(X_train, Y_train, discrete_features=True)
 
     # gets the indices of columns that can be deleted from the dataset
-    delete_ind = gain_vec.argsort()[::-1][N_FEATURES:]
+    n_features = 60
+    delete_ind = gain_vec.argsort()[::-1][n_features:]
     for i in range(len(gain_vec)):
         if i not in delete_ind:
             CHOSEN_FEAUTURES.append(i)
@@ -258,23 +263,24 @@ def cross_validate(X,Y,Nsplits):
 
                 entries.append((selector,iter,score))
 
-                if not selector == "ReliefF":
-                    types = ["Triple Neg", "HR+", "HER2+"]
-                    typeaccs = []
-                    for type in types:
-                        correct = 0
-                        incorrect = 0
 
-                        for y in range(len(Y_pred)):
-                            if Y_pred[y] == type:
-                                if Y_pred[y] == Y_test[y]:
-                                    correct +=1
-                                else:
-                                    incorrect +=1
-                        acc = correct / (correct + incorrect)
-                        typeaccs.append(acc)
-                    update_FSstats(score, typeaccs, types)
+                types = ["Triple Neg", "HR+", "HER2+"]
+                typeaccs = []
+                for type in types:
+                    correct = 0
+                    incorrect = 0
 
+                    for y in range(len(Y_pred)):
+                        if Y_pred[y] == type:
+                            if Y_pred[y] == Y_test[y]:
+                                correct +=1
+                            else:
+                                incorrect +=1
+                    acc = correct / (correct + incorrect)
+                    typeaccs.append(acc)
+
+                update_FSstats(score, typeaccs, types)
+                print(CHOSEN_FEAUTURES)
                 del CHOSEN_FEAUTURES[:]
 
 
@@ -283,12 +289,7 @@ def cross_validate(X,Y,Nsplits):
         pred_list.append(this_pred_list)
         test_list.append(this_test_list)
 
-
-
-            # update_FSstats(np.mean(entries[2]))
-    # print("FEATACC", FEAT_ACC)
-    # print("FREQ_FEATURES", FREQ_FEATURES)
-    plot_features()
+        save_features(selector)
     return pd.DataFrame(entries, columns=['feature selection', 'iteration', 'accuracy']),pred_list,test_list
 
 def update_FSstats(score, typeaccs,types):
@@ -312,27 +313,7 @@ def update_FSstats(score, typeaccs,types):
             FEAT_ACCHR[feature] = [typeaccs[1]]
             FEAT_ACCHER2[feature] = [typeaccs[2]]
 
-
-
-        df_heatmap["feature"].append(feature)
-        for type in range(len(types)):
-            if types[type] in df_heatmap:
-                df_heatmap[types[type]].append(typeaccs[type])
-            else:
-                df_heatmap[types[type]] = [typeaccs[type]]
-        df_heatmap["accs"].append(score)
-
-
-
-
-
-
-
-
-
-
-
-def plot_features():
+def save_features(selector):
     features = []
     accs = []
     freqs = []
@@ -346,9 +327,7 @@ def plot_features():
         accsTN.append(np.mean(FEAT_ACCTN[feature]))
         accsHR.append(np.mean(FEAT_ACCHR[feature]))
         accsHER.append(np.mean(FEAT_ACCHER2[feature]))
-    print(len(freqs))
-    print(len(features))
-    print()
+
     accstypes = [accsTN, accsHR, accsHER]
     types = ["TN", "HR+", "HER2+"]
     dict2 = {"features":[], "type":[], "accuracy":[], "freqs":[]}
@@ -359,51 +338,13 @@ def plot_features():
             dict2["accuracy"].append(accstypes[i][feature])
             dict2["freqs"].append(freqs[feature])
 
+
     df = pd.DataFrame(data=dict2)
-    df.to_csv('heatmap.csv', index=False)
+    df = df.sort_values(by=['freqs'])
+    df.to_csv(f'results_features/heatmap_{selector}_freq.csv', index=False)
+    df = df.sort_values(by=['features'])
+    df.to_csv(f'results_features/heatmap_{selector}_feat.csv', index=False)
 
-    dict = {"features":features, "accs":accs, "freqs":freqs}
-    df = pd.DataFrame(data=dict)
-    df.to_csv('out.csv', index=False)
-    # plt.scatter(features, accs)
-    # for i, txt in enumerate(features):
-    #     # plt.annotate(txt, (freqs[i], accs[i]))
-
-    # plt.show()
-
-    fig = plt.figure(figsize=(12,9))
-    ax = fig.add_subplot(111, projection='3d')
-
-    ax.scatter(features, accs, zs=freqs)
-    ax.set_xlabel('Ca_cyt',fontsize=20,labelpad=15)
-    ax.set_ylabel('Ca_ER', fontsize=20,labelpad=15)
-    ax.set_zlabel('Ca_m',  fontsize=20,labelpad=15, rotation=90)
-    ax.tick_params(axis='both', which='major', labelsize=15)
-    ax = plt.gca()
-    # ax.set_facecolor('#e9e9e9')
-    plt.grid(color='white')
-    plt.show()
-    # data_url = 'http://bit.ly/2cLzoxH'
-    # gapminder = pd.read_csv(data_url)
-    # print(gapminder.head(3))
-    # df1 = pd.DataFrame(data=dict2)
-    # # print(df1.head())
-    # # #   continent  year  lifeExp
-    # # # 0      Asia  1952   28.801
-    # # # 1      Asia  1957   30.332
-    # # # 2      Asia  1962   31.997
-    # # # 3      Asia  1967   34.020
-    # # # 4      Asia  1972   36.088
-    # #
-    # # # ind   feature type acc freq
-    # #
-    # #
-    # # # pandas pivot
-    # heatmap1_data = pd.pivot_table(df1, values='accuracy',
-    #                      index=['type'],
-    #                      columns='features')
-    # sns.heatmap(heatmap1_data, cmap="YlGnBu")
-    # plt.show()
 
 if __name__ == "__main__":
 
@@ -411,14 +352,15 @@ if __name__ == "__main__":
     features = [30]
     # max_iter_list = [800,1000]
     max_iter_list = [800]
-    RELIEFF_K = 10
+    # RELIEFF_K = 10
+    RELIEFF_K = 9
     # RELIEFF_K_list = [7,8,9]
-    RELIEFF_K_list = [8]
+    RELIEFF_K_list = [9]
 
-    Niterations = 30
+    Niterations = 20
     Nsplits = 4 # for cross validation
     # feature_selectors = ["ReliefF","InfoGain","RFE"]
-    feature_selectors = ["InfoGain"]
+    feature_selectors = ["InfoGain", "ReliefF", "RFE"]
     X, Y = process_data()
 
     par_opt = []
