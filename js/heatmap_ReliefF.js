@@ -8,8 +8,8 @@ var margin = {top: 30, right: 30, bottom: 30, left: 30},
   width = 1000 - margin.left - margin.right,
   height = 450 - margin.top - margin.bottom;
 
-
-d3.csv("../../results_features/heatmap_ReliefF_freq.csv", function(data) {
+// GITHUBFIX
+d3.csv("../results_features/heatmap_ReliefF_freq.csv", function(data) {
 var feature_array = [];
 var type_array = [];
 
