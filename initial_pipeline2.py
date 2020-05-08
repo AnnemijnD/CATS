@@ -25,6 +25,7 @@ from mpl_toolkits.mplot3d import Axes3D
 
 style.use('seaborn-whitegrid')
 sns.set()
+
 global CHOSEN_FEAUTURES
 CHOSEN_FEAUTURES = []
 FEAT_ACC = {}
@@ -33,6 +34,9 @@ FEAT_ACCHR = {}
 FEAT_ACCHER2 = {}
 FREQ_FEATURES = {}
 df_heatmap = {"feature":[], "accs":[]}
+K = 0
+MAX_ITER = 0
+N_FEATURES = 0
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
@@ -337,9 +341,9 @@ def save_features(selector):
 
     df = pd.DataFrame(data=dict2)
     df = df.sort_values(by=['freqs'])
-    df.to_csv(f'results_features/heatmap_{selector}_freq.csv', index=False)
-    df = df.sort_values(by=['features'])
-    df.to_csv(f'results_features/heatmap_{selector}_feat.csv', index=False)
+    df.to_csv(f'results_features/paramopt/heatmap_{selector}_K={K}_MAX_ITER={MAX_ITER}_N={N_FEATURES}.csv', index=False)
+    # df = df.sort_values(by=['features'])
+    # df.to_csv(f'results_features/heatmap_{selector}_feat.csv', index=False)
 
 
 if __name__ == "__main__":
@@ -353,7 +357,7 @@ if __name__ == "__main__":
     # RELIEFF_K_list = [7,8,9]
     RELIEFF_K_list = [9]
 
-    Niterations = 20
+    Niterations = 1
     Nsplits = 4 # for cross validation
     # feature_selectors = ["ReliefF","InfoGain","RFE"]
     feature_selectors = ["InfoGain", "ReliefF", "RFE"]
@@ -376,6 +380,8 @@ if __name__ == "__main__":
                 print("\n ----- Now calculating for {} features ------- \n".format(N))
 
                 N_FEATURES = N
+                MAX_ITER = max_iter
+                K = RELIEFF_K
 
                 # different train sets for the feature selection methods
 
