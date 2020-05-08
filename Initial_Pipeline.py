@@ -3,7 +3,6 @@
 # and plot the results using a confusion table. I tried a randomized CV method with 25% and SVM as classifier,
 # but we can change the methods easily. Note that there IS NO feature selection method at all, this needs to be implemented.
 
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -252,13 +251,13 @@ def cross_validate(X,Y,Nsplits):
 
 if __name__ == "__main__":
 
-    features = [10,20,30,40,50,60,70,80,90,100]
-    max_iter_list = [800,1000]
-    RELIEFF_K = 10
-    RELIEFF_K_list = [7,8,9]
+    features = [10]#,20,30,40,50,60,70,80,90,100]
+    max_iter_list = [800]#,1000]
+    #RELIEFF_K = 10
+    RELIEFF_K_list = [7]#,8,9]
     Niterations = 2
     Nsplits = 4 # for cross validation
-    feature_selectors = ["ReliefF","InfoGain","RFE"]
+    feature_selectors = ["ReliefF"]#,"InfoGain","RFE"]
     X, Y = process_data()
 
     par_opt = []
