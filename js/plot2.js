@@ -1,12 +1,16 @@
 
-            d3.csv('cereal.csv', function loadCallback(error, data) {
-                data.forEach(function(d) { // convert strings to numbers
-                    d.calories = +d.calories;
-                    d.sugar = +d.sugar;
-                });
-                // makeVis(data);
-            });
-            d3.csv('IG100.csv', function loadCallback(error, data) {
+var datapath = "../";
+try {
+  d3.csv(datapath + "results_features/heatmap_InfoGain_freq.csv", function(data) {
+    console.log(data)
+  })
+}
+catch(err) {
+  datapath = "../../"
+  d3.csv(datapath + "results_features/heatmap_InfoGain_freq.csv", function(data) {
+    console.log(data)})
+}
+            d3.csv(datapath + 'results_features/IG100.csv', function loadCallback(error, data) {
                 data.forEach(function(d) { // convert strings to numbers
                     d.accs = +d.accs;
                     d.freqs = +d.freqs;
@@ -34,7 +38,7 @@
 
                 var xScale = d3.scale.linear()
                     .domain([ 0,
-                              d3.max(data, function(d) { return d.features; }) + 1 ])
+                              d3.max(data, function(d) { return d.freqs; }) + 1 ])
                     .range([0, width]);
 
                 var yScale = d3.scale.linear()
@@ -61,7 +65,7 @@
                     .attr("x", width) // x-offset from the xAxis, move label all the way to the right
                     .attr("y", -6)    // y-offset from the xAxis, moves text UPWARD!
                     .style("text-anchor", "end") // right-justify text
-                    .text("Feature");
+                    .text("Frequency");
 
                 // Add y-axis to the canvas
                 canvas.append("g")
@@ -106,7 +110,7 @@
                 .enter().append("circle")
                   .attr("class", "dot")
                   .attr("r", 3) // radius size, could map to another data dimension
-                  .attr("cx", function(d) { return xScale( d.features ); })     // x position
+                  .attr("cx", function(d) { return xScale( d.freqs ); })     // x position
                   .attr("cy", function(d) { return yScale( d.accs ); })  // y position
                   .style("fill", function(d) { return colorScale(d.freqs); })
                   .on("mouseover", tipMouseover)
