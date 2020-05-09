@@ -28,12 +28,21 @@ sns.set()
 
 global CHOSEN_FEAUTURES
 CHOSEN_FEAUTURES = []
+# dictionary: {Feature:[accuracies]}
+# Total accuracy
 FEAT_ACC = {}
+
+# accuracy of TN
 FEAT_ACCTN = {}
+
+# accuracy HR+
 FEAT_ACCHR = {}
+
+# accuracy HER2+
 FEAT_ACCHER2 = {}
+
+# accuracy of the features
 FREQ_FEATURES = {}
-df_heatmap = {"feature":[], "accs":[]}
 K = 0
 MAX_ITER = 0
 N_FEATURES = 0
@@ -264,6 +273,7 @@ def cross_validate(X,Y,Nsplits,classifier):
 
                 entries.append((selector,iter,score))
 
+                # calculate the accuracy of each subtype
                 types = ["Triple Neg", "HR+", "HER2+"]
                 typeaccs = []
                 for type in types:
@@ -282,7 +292,10 @@ def cross_validate(X,Y,Nsplits,classifier):
                         acc = ['none incorrect',correct,incorrect]
                     typeaccs.append(acc)
 
+                # update the dictionaries
                 update_FSstats(score, typeaccs, types)
+
+                # delete the list with chosen_features so it can be used next iteration
                 del CHOSEN_FEAUTURES[:]
 
         this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
@@ -290,11 +303,16 @@ def cross_validate(X,Y,Nsplits,classifier):
         pred_list.append(this_pred_list)
         test_list.append(this_test_list)
 
+        # save the dictionaries
         save_features(selector)
     return pd.DataFrame(entries, columns=['feature selection', 'iteration', 'accuracy']),pred_list,test_list
 
 def update_FSstats(score, typeaccs,types):
+    """
+    Updates the directionaries that keep up the accuracies of the features that were selected
+    """
     global CHOSEN_FEAUTURES
+
 
     for feature in CHOSEN_FEAUTURES:
         if feature in FREQ_FEATURES:
@@ -314,12 +332,17 @@ def update_FSstats(score, typeaccs,types):
             FEAT_ACCHER2[feature] = [typeaccs[2]]
 
 def save_features(selector):
+    """
+    Save the features with the accuracies, take the mean per feature
+    """
     features = []
     accs = []
     freqs = []
     accsTN = []
     accsHR = []
     accsHER = []
+
+    # append the lists per feature
     for feature in FREQ_FEATURES.keys():
         features.append(feature)
         accs.append(np.mean(FEAT_ACC[feature]))
@@ -330,6 +353,8 @@ def save_features(selector):
 
     accstypes = [accsTN, accsHR, accsHER]
     types = ["TN", "HR+", "HER2+"]
+
+    # make a dict so it can be saved to csv
     dict2 = {"features":[], "type":[], "accuracy":[], "freqs":[]}
     for feature in range(len(features)):
         for i in range(len(accstypes)):
