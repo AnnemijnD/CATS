@@ -226,8 +226,12 @@ def cross_validate(X,Y,Nsplits,classifier):
 
     for selector in feature_selectors:
 
-        # if selector != 'ReliefF' and RELIEFF_K > 7:
-        #     continue
+        if selector != 'ReliefF' and RELIEFF_K > 7:
+            continue
+        if selector != 'RFE' and RFE_STEP > 1:
+            continue
+        if selector != 'InfoGain' and IG_NEIGHBOURS > 2:
+            continue
 
         print('\n starting with {}...\n'.format(selector))
 
@@ -264,6 +268,7 @@ def cross_validate(X,Y,Nsplits,classifier):
 
                 entries.append((selector,iter,score))
 
+                """
                 types = ["Triple Neg", "HR+", "HER2+"]
                 typeaccs = []
                 for type in types:
@@ -284,13 +289,14 @@ def cross_validate(X,Y,Nsplits,classifier):
 
                 update_FSstats(score, typeaccs, types)
                 del CHOSEN_FEAUTURES[:]
+                """
 
         this_pred_list = list(itertools.chain.from_iterable(this_pred_list))
         this_test_list = list(itertools.chain.from_iterable(this_test_list))
         pred_list.append(this_pred_list)
         test_list.append(this_test_list)
 
-        save_features(selector)
+        #save_features(selector)
     return pd.DataFrame(entries, columns=['feature selection', 'iteration', 'accuracy']),pred_list,test_list
 
 def update_FSstats(score, typeaccs,types):
@@ -338,7 +344,6 @@ def save_features(selector):
             dict2["accuracy"].append(accstypes[i][feature])
             dict2["freqs"].append(freqs[feature])
 
-
     df = pd.DataFrame(data=dict2)
     df = df.sort_values(by=['freqs'])
     df.to_csv(f'results_features/paramopt/heatmap_{selector}_K={K}_MAX_ITER={MAX_ITER}_N={N_FEATURES}.csv', index=False)
@@ -348,23 +353,23 @@ def save_features(selector):
 if __name__ == "__main__":
 
     # SVC optimization
-    degrees = [0, 1, 2, 3, 4, 5, 6]
-    cs = [0.1, 1, 10, 100, 1000]
-    max_iter_list = [600,700,800,1000,1100]
+    degrees = [2, 3, 4]
+    cs = [0.1, 1, 10]
+    max_iter_list = [700,800,1000]
 
     # number of features
     features = [10,20,30,40,50,60,70,80,90,100]
 
     # feature selector optimization
-    RELIEFF_K_list = [5,6,7,8,9,10]
+    RELIEFF_K_list = [7,8,9]
     RFE_step_list = [1,2,3]
-    IG_neighbours_list = [2,3,4,5,6,7]
+    IG_neighbours_list = [2,3,4]
 
-    Niterations = 5
+    Niterations = 1
 
-    Nsplits_list = [3,4,5]
+    Nsplits_list = [4]
 
-    feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
+    feature_selectors = ["ReliefF","InfoGain", "RFE"]
 
     X, Y = process_data()
 
