@@ -233,34 +233,106 @@ def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector):
 
         ind_in = 0
 
+        accuracy_matrix = create_accuracy_matrix(selector,Nsplits_in)
+        inner_results = {}
+
         for train_index_in,test_index_in in validator_in.split(X_train_out):
 
             ind_in += 1
 
-            inner_results = {}
+            inner_results[ind_in] = [] # this one should have the same parameters at every index of the lists beloning to every ind_in
 
             print('starting with inner iteration {} of outer CV {} for {}'.format(ind_in,ind_out,selector))
 
             X_train_in, X_test_in = X_train_out[train_index_in], X_train_out[test_index_in]
             Y_train_in, Y_test_in = Y_train_out[train_index_in], Y_train_out[test_index_in]
 
-            best_models,X_test_fil_outs,best_results = parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,X_test_out,selector) #changes inner_results
+            parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,X_test_out,selector,ind_in) #adds to inner_results
 
             # the same features need to be selected now for the outer test set.
 
-            best_classifier = best_models[selector]
-            X_test_fil_out = X_test_fil_outs[selector]
+        higest_acc_params = average_accuracy(inner_results)
 
-            Y_pred_out = best_classifier.predict(X_test_fil_out)
-            score_out = accuracy_score(Y_test_out,Y_pred_out)
+        # do feature selection and classification on X_train_out using highest accuracy parameters found.
 
-            best_results[selector][N_FEATURES]['score'] = score_out
-            best_results[selector][N_FEATURES]['Y_pred'] = Y_pred_out
-            best_results[selector][N_FEATURES]['Y_test'] = Y_test_out
+
+
+        """
+
+        best_classifier = best_models[selector]
+        X_test_fil_out = X_test_fil_outs[selector]
+
+        Y_pred_out = best_classifier.predict(X_test_fil_out)
+        score_out = accuracy_score(Y_test_out,Y_pred_out)
+
+        best_results[selector][N_FEATURES]['score'] = score_out
+        best_results[selector][N_FEATURES]['Y_pred'] = Y_pred_out
+        best_results[selector][N_FEATURES]['Y_test'] = Y_test_out
+
+        """
 
     return best_results
 
-def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,X_test_out,selector):
+"""
+def create_accuracy_matrix(selector,Nsplits_in):
+
+    if selector == 'ReliefF':
+        size = len(degrees)*len(cs)*len(max_iter_list)*len(RELIEFF_K_list)
+        accuracy_matrix = np.zeros((size,Nsplits_in))
+
+    if selector == 'RFE':
+        size = len(degrees)*len(cs)*len(max_iter_list)*len(IG_neighbours_list)
+        accuracy_matrix = np.zeros((size,Nsplits_in))
+
+    if selector == 'InfoGain':
+        size = len(degrees)*len(cs)*len(max_iter_list)*len(RFE_step_list)
+        accuracy_matrix = np.zeros((size,Nsplits_in))
+
+    return accuracy_matrix
+"""
+
+def average_accuracy(inner_results):
+
+    avg_accs = []
+    highest_acc = 0
+    higest_acc_params = {}
+
+    for i in range(len(inner_results[1])):
+
+        avg_acc = 0
+
+        for ind_in,inner_result in inner_results.items():
+
+            avg_acc += inner_results[ind_in][i]
+
+        avg_accs.append({'avg_acc':avg_acc,'inner_result':inner_results[1][i]})
+
+        if avg_acc > highest_acc:
+            highest_acc = avg_acc
+
+    if selector == 'ReliefF':
+        higest_acc_params = {'avg_acc':avg_acc,'selector':selector,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'ReliefF_K':ReliefF_K}
+    if selector == 'RFE':
+        higest_acc_params = {'avg_acc':avg_acc,'selector':selector,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'RFE_step':RFE_step}
+    if selector == 'InfoGain':
+        higest_acc_params = {'avg_acc':avg_acc,'selector':selector,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'IG_neighbours':IG_neighbours}
+
+    return higest_acc_params
+
+"""
+class paropt_results:
+  def __init__(self, selector, score, degree, c, max_iter, ReliefF_K=None, RFE_step=None, IG_neighbours=None):
+    self.selector = selector
+    self.score = score
+    self.degree = name
+    self.c = age
+    self.max_iter = max_iter
+    self.ReliefF_K = ReliefF_K
+    self.RFE_step = RFE_step
+    self.IG_neighbours = IG_neighbours
+"""
+
+def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,X_test_out,selector,ind_in):
 
     degrees = [2]#, 3]
     cs = [0.1]#, 1]
@@ -274,14 +346,6 @@ def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,X_test_out,
     Niterations = 1
 
     Nsplits_list = [4]
-
-    best_models = {}
-    best_parameters = {}
-    X_test_fil_outs = {}
-
-    bestReliefFscore = 0
-    bestRFEscore = 0
-    bestIGscore = 0
 
     for degree in degrees:
 
@@ -298,35 +362,26 @@ def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,X_test_out,
                         X_train_fil,X_test_fil,X_test_fil_out = FS_ReliefF(X_train_in,Y_train_in,X_test_in,X_test_out,ReliefF_K)
                         score,Y_pred,model = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
 
-                        inner_results['ReliefF'][N_FEATURES] = {'degree':degree,'c':c,'max_iter':max_iter,'ReliefF_K':ReliefF_K,'score':score}
+                        inner_results[ind_in].append({'selector':selector,'Nfeatures':N_FEATURES,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'ReliefF_K':ReliefF_K})
 
                 if selector == 'RFE':
-
-                    bestscore = 0
 
                     for RFE_step in RFE_step_list:
 
                         X_train_fil,X_test_fil,X_test_fil_out = FS_RFE(X_train_in,Y_train_in,X_test_in,X_test_out,RFE_step,classifier)
                         score,Y_pred,model = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
 
-                        inner_results['ReliefF'][N_FEATURES] = {'degree':degree,'c':c,'max_iter':max_iter,'ReliefF_K':ReliefF_K,'score':score}
+                        inner_results[ind_in].append({'selector':selector,'Nfeatures':N_FEATURES,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, RFE_step=RFE_step})
+                        #inner_results[ind_in].append(paropt_results(selector, score, degree, c, max_iter, RFE_step=RFE_step))
 
                 if selector == 'InfoGain':
-
-                    bestscore = 0
 
                     for IG_neighbours in IG_neighbours_list:
 
                         X_train_fil,X_test_fil,X_test_fil_out = FS_IG(X_train_in,Y_train_in,X_test_in,X_test_out,IG_neighbours)
                         score,Y_pred,model = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
 
-                        if score > bestIGscore:
-                            bestIGscore = score
-                            X_test_fil_outs['InfoGain'] = X_test_fil_out
-                            best_models['InfoGain'] = model
-                            best_results['InfoGain'][N_FEATURES] = {'degree':degree,'c':c,'max_iter':max_iter,'IG_neighbours':IG_neighbours,'N_features':N_FEATURES}
-
-        return best_models,X_test_fil_outs,best_results
+                        inner_results[ind_in].append({'selector':selector,'Nfeatures':N_FEATURES,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, IG_neighbours=IG_neighbours})
 
 if __name__ == "__main__":
 
