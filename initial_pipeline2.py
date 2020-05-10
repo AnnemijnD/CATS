@@ -281,7 +281,7 @@ def cross_validate(X,Y,Nsplits,classifier):
                     incorrect = 0
 
                     for y in range(len(Y_pred)):
-                        if Y_pred[y] == type:
+                        if Y_test[y] == type:
                             if Y_pred[y] == Y_test[y]:
                                 correct +=1
                             else:
@@ -289,7 +289,8 @@ def cross_validate(X,Y,Nsplits,classifier):
                     try:
                         acc = correct / (correct + incorrect)
                     except:
-                        acc = ['none incorrect',correct,incorrect]
+                        acc = np.nan
+                    
                     typeaccs.append(acc)
 
                 # update the dictionaries
@@ -312,7 +313,6 @@ def update_FSstats(score, typeaccs,types):
     Updates the directionaries that keep up the accuracies of the features that were selected
     """
     global CHOSEN_FEAUTURES
-
 
     for feature in CHOSEN_FEAUTURES:
         if feature in FREQ_FEATURES:
@@ -345,11 +345,12 @@ def save_features(selector):
     # append the lists per feature
     for feature in FREQ_FEATURES.keys():
         features.append(feature)
-        accs.append(np.mean(FEAT_ACC[feature]))
+        accs.append(np.nanmean(FEAT_ACC[feature]))
+
         freqs.append(FREQ_FEATURES[feature])
-        accsTN.append(np.mean(FEAT_ACCTN[feature]))
-        accsHR.append(np.mean(FEAT_ACCHR[feature]))
-        accsHER.append(np.mean(FEAT_ACCHER2[feature]))
+        accsTN.append(np.nanmean(FEAT_ACCTN[feature]))
+        accsHR.append(np.nanmean(FEAT_ACCHR[feature]))
+        accsHER.append(np.nanmean(FEAT_ACCHER2[feature]))
 
     accstypes = [accsTN, accsHR, accsHER]
     types = ["TN", "HR+", "HER2+"]
@@ -371,23 +372,29 @@ def save_features(selector):
     # df.to_csv(f'results_features/heatmap_{selector}_feat.csv', index=False)
 
 if __name__ == "__main__":
-
     # SVC optimization
     degrees = [0, 1, 2, 3, 4, 5, 6]
+    # degrees = [0]
     cs = [0.1, 1, 10, 100, 1000]
-    max_iter_list = [600,700,800,1000,1100]
+    # cs = [0.1]
+    max_iter_list = [600,700,800]
+    # max_iter_list = [600]
 
     # number of features
-    features = [10,20,30,40,50,60,70,80,90,100]
-
+    # features = [10,20,30,40,50,60,70,80,90,100]
+    features = [30,40,50]
     # feature selector optimization
     RELIEFF_K_list = [5,6,7,8,9,10]
+    # RELIEFF_K_list = [9]
     RFE_step_list = [1,2,3]
+    # RFE_step_list = [3]
     IG_neighbours_list = [2,3,4,5,6,7]
+    # IG_neighbours_list = [4]
 
     Niterations = 5
 
     Nsplits_list = [3,4,5]
+    # Nsplits_list = [3]
 
     feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
 

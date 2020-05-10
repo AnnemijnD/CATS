@@ -27,8 +27,24 @@ style.use('seaborn-whitegrid')
 sns.set()
 global CHOSEN_FEAUTURES
 CHOSEN_FEAUTURES = []
+# dictionary: {Feature:[accuracies]}
+# Total accuracy
 FEAT_ACC = {}
+
+# accuracy of TN
+FEAT_ACCTN = {}
+
+# accuracy HR+
+FEAT_ACCHR = {}
+
+# accuracy HER2+
+FEAT_ACCHER2 = {}
+
+# accuracy of the features
 FREQ_FEATURES = {}
+K = 0
+MAX_ITER = 0
+N_FEATURES = 0
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
