@@ -241,16 +241,14 @@ def average_accuracy(inner_results,Nsplits_in):
 
 def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,selector,ind_in,inner_results):
 
-    degrees = [3]
-    cs = [1]
-    max_iter_list = [800]
+    degrees = [3] #[2,3 (checked: 3;1;800),4]
+    cs = [1] # [0.1,1 (checked: 3;1;800),10]
+    max_iter_list = [800] # [800 (checked: 3;1;800),900,1000]
 
     # feature selector optimization
     RELIEFF_K_list = [7,8,9]
     RFE_step_list = [1,2]
     IG_neighbours_list = [2,3,4]
-
-    Niterations = 1
 
     Nsplits_list = [4]
 
@@ -334,9 +332,9 @@ if __name__ == "__main__":
 
     # number of features
     features = [10,20,30,40,50,60,70,80,90,100]
-    feature_selectors = ["RFE"] #["ReliefF", "InfoGain"]#, "RFE"]
+    feature_selectors = ["ReliefF", "InfoGain", "RFE"]
     Nsplits_out = 5
-    Nsplits_in = 4
+    Nsplits_in = 5
 
     results = {}
 
@@ -358,7 +356,7 @@ if __name__ == "__main__":
         print('\n',results["ReliefF"][10][i+1]['score'])
         print(results["ReliefF"][10][i+1]['params'])
 
-    with open('results_nested.pkl', 'wb') as f:
+    with open('results_nested2.pkl', 'wb') as f:
         pickle.dump(results, f)
 
     #plot.feature_plot(features,feature_selectors,results)
