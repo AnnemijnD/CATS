@@ -22,6 +22,7 @@ import plot
 import itertools
 import pickle
 from mpl_toolkits.mplot3d import Axes3D
+import sys
 
 style.use('seaborn-whitegrid')
 sns.set()
@@ -355,6 +356,11 @@ if __name__ == "__main__":
     # feature_selectors = ["ReliefF","InfoGain","RFE"]
     feature_selectors = ["InfoGain"]
     X, Y = process_data()
+
+    #distribtion plot
+
+
+    sys.exit("quit")
 
     par_opt = []
     par_opt_results = []
