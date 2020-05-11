@@ -90,10 +90,10 @@ def process_data():
     # of 0,1,2 values, that we have to link to a diagnosis. It can be found in dfclin dataframe.
 
     final_df=rotated_df.assign(Diagnosis=dfclin.Subgroup)   #Adds a column Diagnosis with the information of dfclin "Subgroup" column
-
+    print(final_df.head())
     # Store separately the values and the diagnosis. This step is needed for the classifier,
     # we need to give separately the values from the diagnosis
-
+    final_df = final_df[final_df.Diagnosis != "HER2+"]
     X = final_df.iloc[:,1:2835].values      #Store in X all the row data (without sample name or diagnosis). NOTICE that this takes ALL the features, usually we would apply a feature selection method
     Y = final_df.iloc[:, -1].values
           #Store in Y all the diagnosis ("Tripneg","HR+",...)
@@ -400,7 +400,7 @@ if __name__ == "__main__":
     Nsplits_list = [3]
 
     # feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
-    feature_selectors = ["RFE"]
+    feature_selectors = ["ReliefF"]
     X, Y = process_data()
 
     par_opt = []
