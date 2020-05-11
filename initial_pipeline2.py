@@ -399,8 +399,8 @@ if __name__ == "__main__":
     # Nsplits_list = [3,4,5]
     Nsplits_list = [3]
 
-    feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
-
+    # feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
+    feature_selectors = ["RFE"]
     X, Y = process_data()
 
     par_opt = []
