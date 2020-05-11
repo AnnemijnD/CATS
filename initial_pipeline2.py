@@ -248,7 +248,7 @@ def cross_validate(X,Y,Nsplits,classifier):
         testing = []
         for iter in range(Niterations):
 
-            validator = KFold(n_splits=Nsplits,shuffle=True)
+            validator = KFold(n_splits=4,shuffle=True)
 
             for train_index, test_index in validator.split(X):
 
@@ -274,7 +274,8 @@ def cross_validate(X,Y,Nsplits,classifier):
                 entries.append((selector,iter,score))
 
                 # calculate the accuracy of each subtype
-                types = ["Triple Neg", "HR+", "HER2+"]
+                # types = ["Triple Neg", "HR+", "HER2+"]
+                types = ["Triple Neg", "HR+"]
                 typeaccs = []
                 for type in types:
                     correct = 0
@@ -290,7 +291,6 @@ def cross_validate(X,Y,Nsplits,classifier):
                         acc = correct / (correct + incorrect)
                     except:
                         acc = np.nan
-                    
                     typeaccs.append(acc)
 
                 # update the dictionaries
@@ -324,12 +324,12 @@ def update_FSstats(score, typeaccs,types):
             FEAT_ACC[feature].append(score)
             FEAT_ACCTN[feature].append(typeaccs[0])
             FEAT_ACCHR[feature].append(typeaccs[1])
-            FEAT_ACCHER2[feature].append(typeaccs[2])
+            # FEAT_ACCHER2[feature].append(typeaccs[2])
         else:
             FEAT_ACC[feature] = [score]
             FEAT_ACCTN[feature]= [typeaccs[0]]
             FEAT_ACCHR[feature] = [typeaccs[1]]
-            FEAT_ACCHER2[feature] = [typeaccs[2]]
+            # FEAT_ACCHER2[feature] = [typeaccs[2]]
 
 def save_features(selector):
     """
@@ -340,7 +340,7 @@ def save_features(selector):
     freqs = []
     accsTN = []
     accsHR = []
-    accsHER = []
+    # accsHER = []
 
     # append the lists per feature
     for feature in FREQ_FEATURES.keys():
@@ -350,10 +350,12 @@ def save_features(selector):
         freqs.append(FREQ_FEATURES[feature])
         accsTN.append(np.nanmean(FEAT_ACCTN[feature]))
         accsHR.append(np.nanmean(FEAT_ACCHR[feature]))
-        accsHER.append(np.nanmean(FEAT_ACCHER2[feature]))
+        # accsHER.append(np.nanmean(FEAT_ACCHER2[feature]))
 
-    accstypes = [accsTN, accsHR, accsHER]
-    types = ["TN", "HR+", "HER2+"]
+    # accstypes = [accsTN, accsHR, accsHER]
+    accstypes = [accsTN, accsHR]
+    # types = ["TN", "HR+", "HER2+"]
+    types=["TN", "HR+"]
 
     # make a dict so it can be saved to csv
     dict2 = {"features":[], "type":[], "accuracy":[], "freqs":[]}
@@ -367,34 +369,35 @@ def save_features(selector):
 
     df = pd.DataFrame(data=dict2)
     df = df.sort_values(by=['freqs'])
-    df.to_csv(f'results_features/paramopt/heatmap_{selector}_K={K}_MAX_ITER={MAX_ITER}_N={N_FEATURES}.csv', index=False)
+    df.to_csv(f'results_features/paramopt/heatmap_{selector}_K={K}_MAX_ITER={MAX_ITER}_N={N_FEATURES}_2types.csv', index=False)
     # df = df.sort_values(by=['features'])
     # df.to_csv(f'results_features/heatmap_{selector}_feat.csv', index=False)
 
 if __name__ == "__main__":
     # SVC optimization
-    degrees = [0, 1, 2, 3, 4, 5, 6]
+    # degrees = [0, 1, 2, 3, 4, 5, 6]
+    degrees = [1]
     # degrees = [0]
-    cs = [0.1, 1, 10, 100, 1000]
-    # cs = [0.1]
-    max_iter_list = [600,700,800]
-    # max_iter_list = [600]
+    # cs = [0.1, 1, 10, 100, 1000]
+    cs = [0.1]
+    # max_iter_list = [600,700,800]
+    max_iter_list = [900]
 
     # number of features
     # features = [10,20,30,40,50,60,70,80,90,100]
-    features = [30,40,50]
+    features = [50]
     # feature selector optimization
-    RELIEFF_K_list = [5,6,7,8,9,10]
-    # RELIEFF_K_list = [9]
-    RFE_step_list = [1,2,3]
-    # RFE_step_list = [3]
-    IG_neighbours_list = [2,3,4,5,6,7]
-    # IG_neighbours_list = [4]
+    # RELIEFF_K_list = [5,6,7,8,9,10]
+    RELIEFF_K_list = [9]
+    # RFE_step_list = [1,2,3]
+    RFE_step_list = [3]
+    # IG_neighbours_list = [2,3,4,5,6,7]
+    IG_neighbours_list = [4]
 
-    Niterations = 5
+    Niterations = 10
 
-    Nsplits_list = [3,4,5]
-    # Nsplits_list = [3]
+    # Nsplits_list = [3,4,5]
+    Nsplits_list = [3]
 
     feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
 

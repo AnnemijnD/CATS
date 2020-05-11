@@ -6,15 +6,12 @@ import matplotlib.pyplot as plt
     # data_url = 'http://bit.ly/2cLzoxH'
     # gapminder = pd.read_csv(data_url)
 # print(gapminder.head(3))
-df1 = pd.read_csv("heatmap.csv")
+df1 = pd.read_csv("results_features_good/two_subtypes.csv")
 print(df1.head())
 df1 = df1.sort_values(by=['freqs'])
-df1.to_csv("heatmap.csv", index=False)
-print(df1.head())
-df1 = pd.read_csv("heatmap_ordfeat.csv")
-print(df1.head())
+df1.to_csv("results_features_good/two_subtypes_freq.csv", index=False)
 df1 = df1.sort_values(by=['features'])
-df1.to_csv("heatmap_ordfeat.csv", index=False)
+df1.to_csv("results_features_good/two_subtypes_feat.csv", index=False)
 print(df1.head())
 # # print(df1.head())
 # # #   continent  year  lifeExp
