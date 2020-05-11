@@ -405,9 +405,7 @@ if __name__ == "__main__":
     X, Y = process_data()
 
     #distribtion plot
-
-
-    sys.exit("quit")
+    #sys.exit("quit")
 
     par_opt = []
     par_opt_results = []
