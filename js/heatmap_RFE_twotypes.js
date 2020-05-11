@@ -134,11 +134,13 @@ var margin = {top: 30, right: 30, bottom: 30, left: 30},
 // console.log(data)})
 var datapath = "../";
 try {
+  console.log("try")
   d3.csv(datapath +"results_features_good/RFE_two_subtypes_freq.csv",function(data) {
     console.log(data)
   })
 }
 catch(err) {
+  console.log("err")
   datapath = "../../"
   d3.csv(datapath + "results_features_good/RFE_two_subtypes_freq.csv", function(data) {
     console.log(data)})
