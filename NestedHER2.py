@@ -246,9 +246,9 @@ def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,selector,in
     max_iter_list = [900] # [800 (checked: 3;1;800),900,1000]
 
     # feature selector optimization
-    RELIEFF_K_list = [7]#,8,9]
-    RFE_step_list = [1]#,2]
-    IG_neighbours_list = [2]#,3,4]
+    RELIEFF_K_list = [7,8,9]
+    RFE_step_list = [1,2]
+    IG_neighbours_list = [2,3,4]
 
     for degree in degrees:
 
@@ -256,7 +256,6 @@ def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,selector,in
 
             for max_iter in max_iter_list:
 
-                print(degree)
                 classifier = SVC(kernel='linear',C=c,degree=degree,max_iter=max_iter)
 
                 if selector == 'ReliefF':
@@ -286,6 +285,19 @@ def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,selector,in
 
                         inner_results[ind_in].append({'selector':selector,'Nfeatures':N_FEATURES,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'IG_neighbours':IG_neighbours})
 
+def removeHER2(X_train_out,Y_train_out):
+
+    del_ind = []
+
+    for i,case in enumerate(Y_train_out):
+        if case == 'HER2+':
+            del_ind.append(i)
+
+    X_train_out = np.delete(X_train_out,del_ind,0)
+    Y_train_out = np.delete(Y_train_out,del_ind,0)
+
+    return X_train_out,Y_train_out
+
 def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,results):
 
     validator_out = KFold(n_splits=Nsplits_out,shuffle=False)
@@ -300,6 +312,9 @@ def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,results):
 
         X_train_out, X_test_out = X[train_index_out], X[test_index_out]
         Y_train_out, Y_test_out = Y[train_index_out], Y[test_index_out]
+
+        if remove_HER2 == True:
+            X_train_out,Y_train_out = removeHER2(X_train_out,Y_train_out)
 
         validator_in = KFold(n_splits=Nsplits_in,shuffle=False)
 
@@ -331,9 +346,11 @@ if __name__ == "__main__":
 
     # number of features
     features = [10,20,30,40,50,60,70,80,90,100]
-    feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
+    feature_selectors = ["ReliefF", "InfoGain", "RFE"]
     Nsplits_out = 5
     Nsplits_in = 5
+
+    remove_HER2 = True
 
     results = {}
 
@@ -355,7 +372,7 @@ if __name__ == "__main__":
         print('\n',results["ReliefF"][10][i+1]['score'])
         print(results["ReliefF"][10][i+1]['params'])
 
-    with open('results_HERpresent.pkl', 'wb') as f:
+    with open('results_HERremoved.pkl', 'wb') as f:
         pickle.dump(results, f)
 
     #plot.feature_plot(features,feature_selectors,results)
