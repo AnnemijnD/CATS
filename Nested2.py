@@ -16,6 +16,7 @@ from sklearn.feature_selection import mutual_info_classif
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
 import seaborn as sns
 import plot
 import itertools
@@ -35,7 +36,6 @@ FREQ_FEATURES = {}
 df_heatmap = {"feature":[], "accs":[]}
 K = 0
 MAX_ITER = 0
-N_FEATURES = 0
 #This section can be pasted under any of the other subsections to generate a file containing the desired dataframe.
 # It is just a way to visualize what each step does in a nice txt format instead of the console.
 # Just paste it under the desired section and change "dftovisualize" to the df name you want to see
@@ -87,9 +87,20 @@ def process_data():
     X = final_df.iloc[:,1:2835].values      #Store in X all the row data (without sample name or diagnosis). NOTICE that this takes ALL the features, usually we would apply a feature selection method
     Y = final_df.iloc[:, -1].values
           #Store in Y all the diagnosis ("Tripneg","HR+",...)
+
+    #print('now1\n\n')
+    #print(X)
+
+    #scaler = StandardScaler()
+    #scaler.fit(X)
+    #X = scaler.transform(X)
+
+    #print('now2\n\n')
+    #print(X)
+
     return X, Y
 
-def FS_ReliefF(X_train,Y_train,X_test,ReliefF_K):
+def FS_ReliefF(X_train,Y_train,X_test,Nfeatures,ReliefF_K):
     """
     Feature selection using ReliefF
 
@@ -103,10 +114,10 @@ def FS_ReliefF(X_train,Y_train,X_test,ReliefF_K):
     """
 
     # global CHOSEN_FEAUTURES
-    fs = ReliefF(n_neighbors=ReliefF_K, n_features_to_keep=N_FEATURES)
+    fs = ReliefF(n_neighbors=ReliefF_K, n_features_to_keep=Nfeatures)
 
     fs.fit(X_train,Y_train)
-    chosen_features = fs.top_features[:N_FEATURES]
+    chosen_features = fs.top_features[:Nfeatures]
     for el in chosen_features:
         CHOSEN_FEAUTURES.append(el)
 
@@ -115,7 +126,7 @@ def FS_ReliefF(X_train,Y_train,X_test,ReliefF_K):
 
     return X_train_fil,X_test_fil
 
-def FS_RFE(X_train,Y_train,X_test,RFE_step,classifier):
+def FS_RFE(X_train,Y_train,X_test,Nfeatures,RFE_step,classifier):
     """
     Feature selection using RFE-SVM
 
@@ -128,7 +139,7 @@ def FS_RFE(X_train,Y_train,X_test,RFE_step,classifier):
         X_fil (numpy array): filtered dataframe
     """
 
-    selector = RFE(classifier,N_FEATURES,step=RFE_step)
+    selector = RFE(classifier,Nfeatures,step=RFE_step)
     selector = selector.fit(X_train, Y_train)
 
     # construct mask
@@ -145,7 +156,7 @@ def FS_RFE(X_train,Y_train,X_test,RFE_step,classifier):
 
     return X_train_fil,X_test_fil
 
-def FS_IG(X_train,Y_train,X_test,IG_neighbours):
+def FS_IG(X_train,Y_train,X_test,Nfeatures,IG_neighbours):
     """
     Feature selection using FS_IG
 
@@ -161,7 +172,7 @@ def FS_IG(X_train,Y_train,X_test,IG_neighbours):
     gain_vec = mutual_info_classif(X_train, Y_train, discrete_features=True,n_neighbors=IG_neighbours)
 
     # gets the indices of columns that can be deleted from the dataset
-    delete_ind = gain_vec.argsort()[::-1][N_FEATURES:]
+    delete_ind = gain_vec.argsort()[::-1][Nfeatures:]
     for i in range(len(gain_vec)):
         if i not in delete_ind:
             CHOSEN_FEAUTURES.append(i)
@@ -186,28 +197,29 @@ def classify(X_train, X_test, Y_train, Y_test,classifier):
 
 def check_accuracy(highest_acc_params,X_train_out,Y_train_out,X_test_out,Y_test_out):
 
-    degree = highest_acc_params['inner_results']['degree']
     c = highest_acc_params['inner_results']['c']
     max_iter = highest_acc_params['inner_results']['max_iter']
+    selector = highest_acc_params['inner_results']['selector']
+    Nfeatures = highest_acc_params['inner_results']['Nfeatures']
 
-    classifier = SVC(kernel='linear',C=c,degree=degree,max_iter=max_iter)
+    classifier = SVC(kernel='linear',C=c,max_iter=max_iter)
 
     if selector == 'ReliefF':
 
         ReliefF_K = highest_acc_params['inner_results']['ReliefF_K']
-        X_train_out_fil,X_test_out_fil = FS_ReliefF(X_train_out,Y_train_out,X_test_out,ReliefF_K)
+        X_train_out_fil,X_test_out_fil = FS_ReliefF(X_train=X_train_out,Y_train=Y_train_out,X_test=X_test_out,Nfeatures=Nfeatures,ReliefF_K=ReliefF_K)
         score,Y_pred = classify(X_train_out_fil,X_test_out_fil,Y_train_out,Y_test_out,classifier)
 
     if selector == 'RFE':
 
         RFE_step = highest_acc_params['inner_results']['RFE_step']
-        X_train_out_fil,X_test_out_fil = FS_ReliefF(X_train_out,Y_train_out,X_test_out,RFE_step)
+        X_train_out_fil,X_test_out_fil = FS_RFE(X_train=X_train_in,Y_train=Y_train_out,X_test=X_test_out,Nfeatures=Nfeatures,RFE_step=RFE_step,classifier=classifier)
         score,Y_pred = classify(X_train_out_fil,X_test_out_fil,Y_train_out,Y_test_out,classifier)
 
     if selector == 'InfoGain':
 
         IG_neighbours = highest_acc_params['inner_results']['IG_neighbours']
-        X_train_out_fil,X_test_out_fil = FS_ReliefF(X_train_out,Y_train_out,X_test_out,IG_neighbours)
+        X_train_out_fil,X_test_out_fil = FS_IG(X_train=X_train_in,Y_train=Y_train_out,X_test=X_test_out,Nfeatures=Nfeatures,IG_neighbours=IG_neighbours)
         score,Y_pred = classify(X_train_out_fil,X_test_out_fil,Y_train_out,Y_test_out,classifier)
 
     outer_accuracy_results = {'score':score,'params':highest_acc_params,'Y_test':Y_test_out,'Y_pred':Y_pred}
@@ -239,9 +251,12 @@ def average_accuracy(inner_results,Nsplits_in):
 
     return highest_acc_params
 
-def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,selector,ind_in,inner_results):
+def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,ind_in,inner_results):
 
-    degrees = [3] #[2,3 (checked: 3;1;800),4]
+    # number of features
+    features = [10,20,30,40,50,60,70,80,90,100]
+    feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
+
     cs = [1] # [0.1,1 (checked: 3;1;800),10]
     max_iter_list = [900] # [800 (checked: 3;1;800),900,1000]
 
@@ -250,57 +265,39 @@ def parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,selector,in
     RFE_step_list = [1,2]
     IG_neighbours_list = [2,3,4]
 
-    for degree in degrees:
+    for selector in feature_selectors:
+        for Nfeatures in features:
+            for c in cs:
+                for max_iter in max_iter_list:
 
-        for c in cs:
+                    classifier = SVC(kernel='linear',C=c,max_iter=max_iter)
 
-            for max_iter in max_iter_list:
+                    if selector == 'ReliefF':
+                        for ReliefF_K in RELIEFF_K_list:
 
-                classifier = SVC(kernel='linear',C=c,degree=degree,max_iter=max_iter)
+                            X_train_fil,X_test_fil = FS_ReliefF(X_train=X_train_in,Y_train=Y_train_in,X_test=X_test_in,Nfeatures=Nfeatures,ReliefF_K=ReliefF_K)
+                            score,Y_pred = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
+                            inner_results[ind_in].append({'selector':selector,'Nfeatures':Nfeatures,'score':score, 'c':c, 'max_iter':max_iter, 'ReliefF_K':ReliefF_K})
 
-                if selector == 'ReliefF':
+                    if selector == 'RFE':
+                        for RFE_step in RFE_step_list:
 
-                    for ReliefF_K in RELIEFF_K_list:
+                            X_train_fil,X_test_fil = FS_RFE(X_train=X_train_in,Y_train=Y_train_in,X_test=X_test_in,Nfeatures=Nfeatures,RFE_step=RFE_step,classifier=classifier)
+                            score,Y_pred = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
+                            inner_results[ind_in].append({'selector':selector,'Nfeatures':Nfeatures,'score':score, 'c':c, 'max_iter':max_iter, 'RFE_step':RFE_step})
 
-                        X_train_fil,X_test_fil = FS_ReliefF(X_train_in,Y_train_in,X_test_in,ReliefF_K)
-                        score,Y_pred = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
+                    if selector == 'InfoGain':
+                        for IG_neighbours in IG_neighbours_list:
 
-                        inner_results[ind_in].append({'selector':selector,'Nfeatures':N_FEATURES,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'ReliefF_K':ReliefF_K})
+                            X_train_fil,X_test_fil = FS_IG(X_train=X_train_in,Y_train=Y_train_in,X_test=X_test_in,Nfeatures=Nfeatures,IG_neighbours=IG_neighbours)
+                            score,Y_pred = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
+                            inner_results[ind_in].append({'selector':selector,'Nfeatures':Nfeatures,'score':score, 'c':c, 'max_iter':max_iter, 'IG_neighbours':IG_neighbours})
 
-                if selector == 'RFE':
+def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,results,iter):
 
-                    for RFE_step in RFE_step_list:
+    results[iter] = {}
 
-                        X_train_fil,X_test_fil = FS_RFE(X_train_in,Y_train_in,X_test_in,RFE_step,classifier)
-                        score,Y_pred = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
-
-                        inner_results[ind_in].append({'selector':selector,'Nfeatures':N_FEATURES,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'RFE_step':RFE_step})
-
-                if selector == 'InfoGain':
-
-                    for IG_neighbours in IG_neighbours_list:
-
-                        X_train_fil,X_test_fil = FS_IG(X_train_in,Y_train_in,X_test_in,IG_neighbours)
-                        score,Y_pred = classify(X_train_fil,X_test_fil,Y_train_in,Y_test_in,classifier)
-
-                        inner_results[ind_in].append({'selector':selector,'Nfeatures':N_FEATURES,'score':score, 'degree':degree, 'c':c, 'max_iter':max_iter, 'IG_neighbours':IG_neighbours})
-
-def removeHER2(X_train_out,Y_train_out):
-
-    del_ind = []
-
-    for i,case in enumerate(Y_train_out):
-        if case == 'HER2+':
-            del_ind.append(i)
-
-    X_train_out = np.delete(X_train_out,del_ind,0)
-    Y_train_out = np.delete(Y_train_out,del_ind,0)
-
-    return X_train_out,Y_train_out
-
-def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,results):
-
-    validator_out = KFold(n_splits=Nsplits_out,shuffle=False)
+    validator_out = KFold(n_splits=Nsplits_out,shuffle=True)
 
     ind_out = 0
 
@@ -308,15 +305,12 @@ def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,results):
 
         ind_out += 1
 
-        print('\n starting with outer CV {} for {}...\n'.format(ind_out,selector))
+        print('\n starting with outer CV {} for iteration {}...\n'.format(ind_out,iter))
 
         X_train_out, X_test_out = X[train_index_out], X[test_index_out]
         Y_train_out, Y_test_out = Y[train_index_out], Y[test_index_out]
 
-        if remove_HER2 == True:
-            X_train_out,Y_train_out = removeHER2(X_train_out,Y_train_out)
-
-        validator_in = KFold(n_splits=Nsplits_in,shuffle=False)
+        validator_in = KFold(n_splits=Nsplits_in,shuffle=True)
 
         ind_in = 0
 
@@ -328,54 +322,37 @@ def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,results):
 
             inner_results[ind_in] = [] # this one should have the same parameters at every index of the lists beloning to every ind_in
 
-            print('starting with inner iteration {} of outer CV {} for {}'.format(ind_in,ind_out,selector))
+            print('starting with inner iteration {} of outer CV {} for iteration {}'.format(ind_in,ind_out,iter))
 
             X_train_in, X_test_in = X_train_out[train_index_in], X_train_out[test_index_in]
             Y_train_in, Y_test_in = Y_train_out[train_index_in], Y_train_out[test_index_in]
 
-            parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,selector,ind_in,inner_results) #adds to inner_results
+            parameter_optimization(X_train_in,Y_train_in,X_test_in,Y_test_in,ind_in,inner_results) #adds to inner_results
 
             # the same features need to be selected now for the outer test set.
 
         highest_acc_params = average_accuracy(inner_results,Nsplits_in)
         outer_accuracy_results = check_accuracy(highest_acc_params,X_train_out,Y_train_out,X_test_out,Y_test_out)
 
-        results[selector][N_FEATURES][ind_out] = outer_accuracy_results
+        results[iter][ind_out] = outer_accuracy_results
 
 if __name__ == "__main__":
 
-    # number of features
-    features = [10,20,30,40,50,60,70,80,90,100]
-    feature_selectors = ["ReliefF", "InfoGain", "RFE"]
     Nsplits_out = 5
     Nsplits_in = 5
-
-    remove_HER2 = False
+    Niterations = 1
 
     results = {}
 
     X, Y = process_data()
 
-    for selector in feature_selectors:
+    for iter in range(Niterations):
 
-        results[selector] = {}
+        nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,results,iter) # adds to results
 
-        for N_FEATURES in features:
-
-            results[selector][N_FEATURES] = {}
-
-            print("\n ----- Now calculating for {} features for {} ------- \n".format(N_FEATURES,selector))
-
-            nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,results) # adds to results
-
-    for i in range(Nsplits_out):
-        print('\n',results["ReliefF"][10][i+1]['score'])
-        print(results["ReliefF"][10][i+1]['params'])
-
-    with open('results_everythinginner.pkl', 'wb') as f:
+    with open('results_HERpresent_allnested.pkl', 'wb') as f:
         pickle.dump(results, f)
 
-    #plot.feature_plot(features,feature_selectors,results)
 
 """Sources:
 https://towardsdatascience.com/building-a-simple-machine-learning-model-on-breast-cancer-data-eca4b3b99fa3

@@ -330,7 +330,7 @@ def nested_cross_validate(X,Y,Nsplits_out,Nsplits_in,selector,results):
 if __name__ == "__main__":
 
     # number of features
-    features = [10,20,30,40,50,60,70,80,90,100]
+    features = [10]#,20,30,40,50,60,70,80,90,100]
     feature_selectors = ["ReliefF"]#, "InfoGain", "RFE"]
     Nsplits_out = 5
     Nsplits_in = 5
@@ -355,7 +355,7 @@ if __name__ == "__main__":
         print('\n',results["ReliefF"][10][i+1]['score'])
         print(results["ReliefF"][10][i+1]['params'])
 
-    with open('results_HERpresent.pkl', 'wb') as f:
+    with open('results_test1.pkl', 'wb') as f:
         pickle.dump(results, f)
 
     #plot.feature_plot(features,feature_selectors,results)
